@@ -1,1406 +1,1725 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="dark">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRÄGER // PSS® 7000 SCBA — INTERACTIVE TELEMETRY & TRAINING SYSTEM</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
-<meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
-<title>
-Dräger PSS 7000 SCBA - 3D Exploded Viewer
-</title>
-
-<!-- ============================================================
-     THREE.JS IMPORT MAP
-     ============================================================ -->
-
-<script type="importmap">
-
-{
-    "imports": {
-        "three":
-            "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/addons/":
-            "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  <!-- ES Module Shims & Three.js Import Map -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
     }
-}
+  </script>
 
-</script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            void: '#050608',
+            slatePanel: 'rgba(11, 14, 20, 0.78)',
+            draegerCyan: '#00f0ff',
+            draegerAmber: '#ff9e00',
+            draegerCrimson: '#ff2a4b',
+            draegerEmerald: '#00e676',
+          }
+        }
+      }
+    }
+  </script>
 
-<style>
-
-/* ============================================================
-   GLOBAL
-   ============================================================ */
-
-:root {
-    --bg: #f8fafc;
-    --panel: rgba(255, 255, 255, 0.94);
-    --border: #e2e8f0;
-    --accent: #ea580c;
-    --accent-glow: rgba(234, 88, 12, 0.3);
-    --text: #0f172a;
-    --muted: #64748b;
-    --green: #059669;
-    --red: #dc2626;
-    --mono:
-        "SF Mono",
-        "JetBrains Mono",
-        "Consolas",
-        monospace;
-}
-
-{
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    user-select: none;
-}
-
-html,
-body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-
-body {
-    background: var(--bg);
-    color: var(--text);
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
-}
-
-/* ============================================================
-   THREE.JS CONTAINER
-   ============================================================ */
-
-#webgl-container {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-}
-
-/* ============================================================
-   LEADER LINE CANVAS
-   ============================================================ */
-
-#leader-canvas {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 2;
-}
-
-/* ============================================================
-   LABELS
-   ============================================================ */
-
-#labels-container {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 3;
-}
-
-/* ============================================================
-   HEADER
-   ============================================================ */
-
-.header-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(248, 250, 252, 0));
-    z-index: 10;
-    pointer-events: none;
-}
-
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.badge {
-    background: var(--accent);
-    color: #fff;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 1px;
-}
-
-.title {
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-/* ============================================================
-   STATUS PANEL
-   ============================================================ */
-
-.hud-panel {
-    position: fixed;
-    top: 70px;
-    left: 20px;
-    width: 330px;
-    padding: 14px 16px;
-    background: var(--panel);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    z-index: 10;
-    font-family: var(--mono);
-    font-size: 11px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-}
-
-.hud-title {
-    color: var(--accent);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    margin-bottom: 9px;
-}
-
-.status-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0;
-}
-
-.status-name {
-    color: var(--muted);
-}
-
-.status-prog {
-    color: var(--accent);
-    font-weight: 700;
-}
-
-.status-ok {
-    color: var(--green);
-    font-weight: 700;
-}
-
-.status-err {
-    color: var(--red);
-    font-weight: 700;
-}
-
-/* ============================================================
-   INSPECTOR
-   ============================================================ */
-
-.inspector {
-    display: none;
-    position: fixed;
-    top: 70px;
-    right: 20px;
-    width: 380px;
-    padding: 20px;
-    background: var(--panel);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    z-index: 10;
-    box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05);
-}
-
-.insp-tag {
-    color: var(--accent);
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1px;
-}
-
-.insp-title {
-    margin: 5px 0 12px;
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--text);
-}
-
-.insp-desc {
-    color: var(--text);
-    font-size: 13px;
-    line-height: 1.6;
-    margin-bottom: 20px;
-    text-align: justify;
-}
-
-.spec-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
-.spec {
-    padding: 10px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-}
-
-.spec-k {
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 9px;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-}
-
-.spec-v {
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-}
-
-/* ============================================================
-   CONTROL DECK
-   ============================================================ */
-
-.control-deck {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 10px 14px;
-    background: var(--panel);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    z-index: 10;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-}
-
-.btn {
-    border: 1px solid #cbd5e1;
-    background: #f8fafc;
-    color: var(--text);
-    padding: 7px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    transition: all 0.2s ease;
-}
-
-.btn:hover {
-    border-color: var(--accent);
-}
-
-.btn-accent {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-}
-
-/* ============================================================
-   CAROUSEL NAV
-   ============================================================ */
-
-.carousel-nav {
-    display: flex;
-    position: fixed;
-    bottom: 90px;
-    left: 50%;
-    transform: translateX(-50%);
-    gap: 15px;
-    z-index: 10;
-}
-
-.carousel-btn {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 800;
-    backdrop-filter: blur(12px);
-    transition: all 0.2s ease;
-}
-
-.carousel-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-}
-
-/* ============================================================
-   LABELS
-   ============================================================ */
-
-.annotation-badge {
-    position: absolute;
-    transform: translateY(-50%);
-    pointer-events: auto;
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #e2e8f0;
-    border-left: 4px solid var(--accent);
-    border-radius: 4px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 11px;
-    white-space: nowrap;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.annotation-badge:hover,
-.annotation-badge.active {
-    border-color: var(--accent);
-    box-shadow: 0 0 10px var(--accent-glow);
-}
-
-.badge-title {
-    display: flex;
-    align-items: center;
-}
-
-.badge-title span {
-    color: var(--accent);
-    font-weight: 900;
-    margin-right: 6px;
-}
-
-.badge-meta {
-    color: var(--muted);
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* ============================================================
-   ERROR PANEL
-   ============================================================ */
-
-#error-panel {
-    display: none;
-    position: fixed;
-    left: 20px;
-    bottom: 90px;
-    width: 470px;
-    max-width: calc(100vw - 40px);
-    padding: 14px;
-    background: rgba(254, 226, 226, 0.97);
-    border: 1px solid var(--red);
-    border-radius: 7px;
-    z-index: 20;
-    font-family: var(--mono);
-    font-size: 10px;
-}
-
-#error-title {
-    color: #b91c1c;
-    font-weight: 800;
-    margin-bottom: 7px;
-}
-
-#error-message {
-    color: #7f1d1d;
-    white-space: pre-line;
-    line-height: 1.5;
-}
-
-/* ============================================================
-   INTRO SCREEN
-   ============================================================ */
-
-#intro-container {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.8s ease;
-}
-
-#intro-video {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0.6;
-}
-
-.intro-title {
-    position: relative;
-    z-index: 51;
-    color: #ffffff;
-    font-size: 3rem;
-    font-weight: 900;
-    letter-spacing: 5px;
-    text-transform: uppercase;
-    font-family: var(--mono);
-    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-}
-
-/* ============================================================
-   MOBILE
-   ============================================================ */
-
-@media(max-width:700px) {
-    .hud-panel {
-        left: 10px;
-        top: 62px;
-        width: 240px;
+  <style>
+    :root {
+      --bg-void: #050608;
+      --hairline: rgba(255, 255, 255, 0.11);
+      --cyan: #00f0ff;
+      --amber: #ff9e00;
+      --crimson: #ff2a4b;
+      --emerald: #00e676;
     }
 
-    .inspector {
-        right: 10px;
-        top: 62px;
-        width: 250px;
+    * {
+      box-sizing: border-box;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 240, 255, 0.3) #050608;
     }
 
-    .title {
-        display: none;
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg-void);
+      color: #f3f4f6;
     }
 
-    .control-deck {
-        width: calc(100% - 20px);
-        bottom: 10px;
-        justify-content: center;
-        gap: 7px;
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      background-color: var(--bg-void);
+      font-family: 'Inter', sans-serif;
     }
 
-    .intro-title {
-        font-size: 2rem;
+    /* Flight12 Aerospace Telemetry Grid & Hairlines */
+    .telemetry-grid-bg {
+      background-size: 48px 48px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
-}
 
-</style>
+    .panel-glass {
+      background: rgba(9, 12, 18, 0.76);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--hairline);
+      position: relative;
+    }
 
+    /* Technical Corner Crosshairs (+) inspired by flight12.vercel.app */
+    .corner-brackets::before,
+    .corner-brackets::after {
+      content: '+';
+      position: absolute;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1;
+      color: rgba(0, 240, 255, 0.65);
+      pointer-events: none;
+    }
+    .corner-brackets::before {
+      top: -6px;
+      left: -4px;
+    }
+    .corner-brackets::after {
+      bottom: -6px;
+      right: -4px;
+    }
+
+    /* Custom Range Sliders */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.12);
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: #00f0ff;
+      cursor: pointer;
+      border: 1px solid #050608;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+    }
+
+    /* 3D Hotspot Markers */
+    .hotspot-marker {
+      position: fixed;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      z-index: 25;
+      transition: opacity 0.25s ease, transform 0.2s ease;
+    }
+    .hotspot-marker:hover {
+      transform: translate(-50%, -50%) scale(1.08);
+      z-index: 35;
+    }
+
+    /* PASS Alarm Flash Animation */
+    @keyframes passFlash {
+      0%, 100% { box-shadow: inset 0 0 0px rgba(255, 42, 75, 0); }
+      50% { box-shadow: inset 0 0 90px rgba(255, 42, 75, 0.42); }
+    }
+    .pass-alarm-active {
+      animation: passFlash 0.45s infinite;
+    }
+
+    @keyframes pulseLed {
+      0%, 100% { opacity: 1; filter: drop-shadow(0 0 8px currentColor); }
+      50% { opacity: 0.25; filter: drop-shadow(0 0 0px currentColor); }
+    }
+    .led-blink {
+      animation: pulseLed 0.6s infinite;
+    }
+
+    /* Scanline Overlay */
+    .scanline-overlay {
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 240, 255, 0.015) 50%,
+        rgba(0, 240, 255, 0.015)
+      );
+      background-size: 100% 4px;
+    }
+  </style>
 </head>
-
-<body>
-
-<!-- ============================================================
-     INTRO SCREEN
-     ============================================================ -->
-
-<div id="intro-container">
-    <video id="intro-video" src="intro.mp4" autoplay muted playsinline></video>
-    <div class="intro-title">Dräger 7000 BA</div>
-</div>
-
-<!-- ============================================================
-     HEADER
-     ============================================================ -->
-
-<header class="header-bar">
-    <div class="brand">
-        <span class="badge">DRÄGER</span>
-        <span class="title">PSS 7000 SCBA — 3D EXPLODED VIEW</span>
-    </div>
-</header>
-
-<!-- ============================================================
-     STATUS
-     ============================================================ -->
-
-<div class="hud-panel">
-    <div class="hud-title">MODEL STATUS</div>
-    <div class="status-row">
-        <span class="status-name">body.glb</span>
-        <span id="st-body" class="status-prog">LOADING</span>
-    </div>
-    <div class="status-row">
-        <span class="status-name">mask.glb</span>
-        <span id="st-mask" class="status-prog">LOADING</span>
-    </div>
-    <div class="status-row">
-        <span class="status-name">tank.glb</span>
-        <span id="st-tank" class="status-prog">LOADING</span>
-    </div>
-    <div class="status-row">
-        <span class="status-name">unit.glb</span>
-        <span id="st-unit" class="status-prog">LOADING</span>
-    </div>
-</div>
-
-<!-- ============================================================
-     INSPECTOR
-     ============================================================ -->
-
-<div class="inspector">
-    <div class="insp-tag" id="insp-tag">ASSEMBLY VIEW</div>
-    <h2 class="insp-title" id="insp-title">Select a component</h2>
-    <p class="insp-desc" id="insp-desc">
-        Select one of the SCBA components or click its associated label 
-        to view comprehensive diagnostic and material specifications.
-    </p>
-
-    <div class="spec-grid">
-        <div class="spec">
-            <div class="spec-k">Part No</div>
-            <div class="spec-v" id="card-pno">--</div>
-        </div>
-        <div class="spec">
-            <div class="spec-k">Material</div>
-            <div class="spec-v" id="card-mat">--</div>
-        </div>
-        <div class="spec">
-            <div class="spec-k">Specification</div>
-            <div class="spec-v" id="card-flow">--</div>
-        </div>
-        <div class="spec">
-            <div class="spec-k">Standard</div>
-            <div class="spec-v" id="card-serv">--</div>
-        </div>
-    </div>
-</div>
-
-<!-- ============================================================
-     CONTROLS
-     ============================================================ -->
-
-<div class="control-deck">
-    <button class="btn" id="btn-assemble">ASSEMBLE</button>
-    <button class="btn btn-accent" id="btn-explode">EXPLODE</button>
-</div>
-
-<div class="carousel-nav" id="carousel-nav">
-    <button class="carousel-btn" id="btn-prev">◀ PREV</button>
-    <button class="carousel-btn" id="btn-next">NEXT ▶</button>
-    <button class="carousel-btn" id="btn-narrate">🔊 NARRATE: OFF</button>
-</div>
-
-<!-- ============================================================
-     THREE.JS CONTAINERS
-     ============================================================ -->
-
-<div id="webgl-container"></div>
-<canvas id="leader-canvas"></canvas>
-<div id="labels-container"></div>
-
-<!-- ============================================================
-     ERROR PANEL
-     ============================================================ -->
-
-<div id="error-panel">
-    <div id="error-title">MODEL LOADING ERROR</div>
-    <div id="error-message"></div>
-</div>
-
-<!-- ============================================================
-     THREE.JS APPLICATION
-     ============================================================ -->
-
-<script type="module">
-
-/* ============================================================
-   IMPORTS
-   ============================================================ */
-
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-
-/* ============================================================
-   MODEL DATA
-   ============================================================ */
-
-const MODULE_METADATA = {
-    body: {
-        file: "./body.glb",
-        name: "Chassis & Reducer Harness",
-        tag: "CARRIER & PNEUMATICS",
-        desc: "The Dräger PSS 7000 features a highly advanced, ergonomic carrying system designed for extended rigorous deployments. It integrates a lightweight carbon-fiber composite backplate with a highly adjustable, pivoting waist belt. The system includes protected, integrated hose channels preventing entanglement and an advanced pneumatic gauge structure optimized for immediate readout in limited visibility conditions.",
-        pno: "3356000",
-        mat: "Carbon Composite / Kevlar Blend",
-        flow: "Pneumatic Assembly",
-        serv: "EN 137:2006 Type 2",
-        vector: new THREE.Vector3(0, 0, 0)
-    },
-    mask: {
-        file: "./mask.glb",
-        name: "FPS 7000 Full Face Mask",
-        tag: "PPE / RESPIRATORY",
-        desc: "The Dräger FPS 7000 offers an exceptionally large field of vision via a distortion-free polycarbonate visor. Engineered for extreme thermal and mechanical resistance, it utilizes an EPDM or silicone body with a double sealing line for an uncompromising fit across varying head shapes. Features integrated voice communication ports and direct push-in lung demand valve (LDV) interfacing.",
-        pno: "R56200",
-        mat: "EPDM / Polycarbonate",
-        flow: "Positive Pressure LDV",
-        serv: "EN 136 Class 3",
-        vector: new THREE.Vector3(0, 4.0, 2.0)
-    },
-    tank: {
-        file: "./tank.glb",
-        name: "Compressed-Air Cylinder",
-        tag: "STORAGE / COMPRESSED AIR",
-        desc: "A high-capacity, non-limited life (NLL) compressed-air cylinder constructed with a lightweight Type 4 carbon-composite overwrap on a PET liner. Rated for 300 bar (4500 psi) operation, it supplies 6.8 liters of breathable air. Features the Dräger cylinder valve complete with an EFV (Excess Flow Valve) mechanism to prevent uncontrolled discharge if the valve is sheared off.",
-        pno: "3358327",
-        mat: "Type 4 Carbon Composite",
-        flow: "6.8 L / 300 Bar",
-        serv: "CE / NLL Certified",
-        vector: new THREE.Vector3(0, 0, -4.0)
-    },
-    unit: {
-        file: "./unit.glb",
-        name: "Bodyguard 7000",
-        tag: "ELECTRONIC MONITORING",
-        desc: "An all-in-one distress signal unit, pressure gauge, and data logger. Provides continuous monitoring of cylinder pressure and remaining air time. Features an integrated motion sensor, manual panic button, and RFID tracking capabilities for post-incident analysis.",
-        pno: "3351324",
-        mat: "Impact-resistant Polymer",
-        flow: "Telemetry / HUD Output",
-        serv: "IP67 / ATEX",
-        vector: new THREE.Vector3(3.0, 0, 0)
-    }
-};
-
-/* ============================================================
-   DOM
-   ============================================================ */
-
-const container = document.getElementById("webgl-container");
-const leaderCanvas = document.getElementById("leader-canvas");
-const ctx = leaderCanvas.getContext("2d");
-const labelsContainer = document.getElementById("labels-container");
-const errorPanel = document.getElementById("error-panel");
-const errorMessage = document.getElementById("error-message");
-const carouselNav = document.getElementById("carousel-nav");
-
-/* ============================================================
-   SCENE
-   ============================================================ */
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf8fafc);
-scene.fog = new THREE.FogExp2(0xf8fafc, 0.06);
-
-/* ============================================================
-   CAMERA
-   ============================================================ */
-
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
-camera.position.set(0, 0, 5);
-
-/* ============================================================
-   RENDERER
-   ============================================================ */
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
-container.appendChild(renderer.domElement);
-
-/* ============================================================
-   ORBIT CONTROLS
-   ============================================================ */
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.06;
-controls.minDistance = 0.1;
-controls.maxDistance = 100;
-controls.enablePan = false;
-controls.target.set(0, 0, 0);
-
-/* ============================================================
-   LIGHTING
-   ============================================================ */
-
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
-scene.add(ambientLight);
-
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
-keyLight.position.set(5, 8, 6);
-scene.add(keyLight);
-
-const fillLight = new THREE.DirectionalLight(0x9db7ff, 0.8);
-fillLight.position.set(-5, 3, -5);
-scene.add(fillLight);
-
-const orangeLight = new THREE.PointLight(0xea580c, 1.5, 10);
-orangeLight.position.set(-3, 2, 2);
-scene.add(orangeLight);
-
-/* ============================================================
-   GRID
-   ============================================================ */
-
-const grid = new THREE.GridHelper(10, 20, 0xea580c, 0xcbd5e1);
-grid.position.y = -1.5;
-scene.add(grid);
-
-/* ============================================================
-   FROSTED GLASS BACKDROP
-   ============================================================ */
-
-const glassGeo = new THREE.PlaneGeometry(100, 100);
-const glassMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    metalness: 0.1,
-    roughness: 0.75,
-    transmission: 0.95,
-    ior: 1.4,
-    thickness: 0.5,
-    transparent: true,
-    opacity: 1
-});
-const glassBackdrop = new THREE.Mesh(glassGeo, glassMat);
-glassBackdrop.position.set(0, 0, -1.8);
-glassBackdrop.visible = true; 
-scene.add(glassBackdrop);
-
-/* ============================================================
-   ASSEMBLY
-   ============================================================ */
-
-const assemblyGroup = new THREE.Group();
-scene.add(assemblyGroup);
-
-/* ============================================================
-   STATE
-   ============================================================ */
-
-const loadedModules = new Map();
-let currentExplodeRatio = 1;
-let targetExplodeRatio = 1;
-let activeModuleId = null;
-let baseCameraDistance = 5;
-
-const moduleKeys = ["body", "mask", "tank", "unit"];
-let isCarouselMode = true;
-let carouselIndex = 0;
-let isDraggingPart = false;
-let previousMouse = { x: 0, y: 0 };
-
-let isNarrating = false;
-const ttsSynth = window.speechSynthesis;
-
-/* ============================================================
-   GLTF LOADER
-   ============================================================ */
-
-const loader = new GLTFLoader();
-
-/* ============================================================
-   DRACO LOADER
-   ============================================================ */
-
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/");
-loader.setDRACOLoader(dracoLoader);
-
-/* ============================================================
-   ERROR HANDLING
-   ============================================================ */
-
-function showError(message) {
-    errorPanel.style.display = "block";
-    errorMessage.innerText = message;
-}
-
-function hideError() {
-    errorPanel.style.display = "none";
-}
-
-/* ============================================================
-   STATUS
-   ============================================================ */
-
-function setStatus(id, text, className) {
-    const element = document.getElementById(`st-${id}`);
-    if (!element) return;
-    element.innerText = text;
-    element.className = className;
-}
-
-/* ============================================================
-   RESET CAMERA
-   ============================================================ */
-
-function resetCamera() {
-    camera.position.set(0, 0, baseCameraDistance * 0.7);
-    controls.target.set(0, 0, 0);
-    camera.lookAt(0, 0, 0);
-    controls.update();
-}
-
-/* ============================================================
-   LOAD MODEL
-   ============================================================ */
-
-function loadModel(key) {
-    const meta = MODULE_METADATA[key];
-    const start = performance.now();
-    setStatus(key, "LOADING", "status-prog");
-    console.log("[GLB] Loading:", meta.file);
-
-    loader.load(
-        meta.file,
-        gltf => {
-            const elapsed = (performance.now() - start) / 1000;
-            const model = gltf.scene;
-
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const localCenter = model.worldToLocal(center);
-
-            model.userData = {
-                id: key,
-                ...meta,
-                initialPosition: model.position.clone(),
-                localCenter: localCenter,
-                badgeEl: null
-            };
-
-            model.traverse(object => {
-                if (object.isMesh) {
-                    object.castShadow = true;
-                    object.receiveShadow = true;
-
-                    if (object.material) {
-                        const materials = Array.isArray(object.material) ? object.material : [object.material];
-                        for (let i = 0; i < materials.length; i++) {
-                            let material = materials[i];
-                            
-                            if (material.map) material.map.colorSpace = THREE.SRGBColorSpace;
-                            if (material.emissiveMap) material.emissiveMap.colorSpace = THREE.SRGBColorSpace;
-
-                            if (material.name && material.name.toLowerCase().match(/glass|visor|lens|clear|transparent/i)) {
-                                const glassMat = new THREE.MeshPhysicalMaterial({
-                                    name: material.name,
-                                    color: material.color || new THREE.Color(0xffffff),
-                                    metalness: 0.1,
-                                    roughness: 0.05,
-                                    transmission: 0.95,
-                                    ior: 1.5,
-                                    thickness: 0.05,
-                                    transparent: true,
-                                    opacity: 1.0,
-                                    side: THREE.DoubleSide
-                                });
-
-                                if (Array.isArray(object.material)) {
-                                    object.material[i] = glassMat;
-                                } else {
-                                    object.material = glassMat;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
-            assemblyGroup.add(model);
-            loadedModules.set(key, model);
-            setStatus(key, `LOADED ${elapsed.toFixed(2)}s`, "status-ok");
-            console.log(`[GLB] ${key} loaded successfully`);
-
-            if (loadedModules.size === 4) {
-                console.log("[GLB] ALL MODELS LOADED");
-                document.querySelector(".hud-panel").style.display = "none";
-                normalizeScene();
-                createBadges();
-                hideError();
-                updateCarouselState();
-            }
-        },
-        xhr => {
-            if (xhr.lengthComputable) {
-                const percent = Math.round((xhr.loaded / xhr.total) * 100);
-                setStatus(key, `${percent}%`, "status-prog");
-                console.log(`[GLB] ${key}: ${percent}%`);
-            }
-        },
-        error => {
-            console.error("[GLB] LOAD FAILED", key, meta.file, error);
-            setStatus(key, "FAILED", "status-err");
-            let detail = "Unknown loading error.";
-            if (error && error.message) detail = error.message;
-            showError(`Unable to load:\n\n${meta.file}\n\nError:\n${detail}\n\nFolder must contain:\n\nindex.html\nbody.glb\nmask.glb\ntank.glb\nunit.glb\n\nThe GLTF loader has Draco support enabled.`);
-        }
-    );
-}
-
-/* ============================================================
-   LOAD ALL MODELS
-   ============================================================ */
-
-loadModel("body");
-loadModel("mask");
-loadModel("tank");
-loadModel("unit");
-
-/* ============================================================
-   NORMALISE / FRAME
-   ============================================================ */
-
-function normalizeScene() {
-    if (loadedModules.size === 0) return;
-
-    let overallBox = new THREE.Box3().setFromObject(assemblyGroup);
-    if (overallBox.isEmpty()) return;
-
-    const size = overallBox.getSize(new THREE.Vector3());
-    const maxDimension = Math.max(size.x, size.y, size.z);
-
-    if (maxDimension > 10) assemblyGroup.scale.setScalar(2 / maxDimension);
-
-    const bodyModel = loadedModules.get("body");
-    if (bodyModel) {
-        const bodyBox = new THREE.Box3().setFromObject(bodyModel);
-        const bodyCenter = bodyBox.getCenter(new THREE.Vector3());
-        assemblyGroup.position.sub(bodyCenter);
-    } else {
-        overallBox = new THREE.Box3().setFromObject(assemblyGroup);
-        const newCenter = overallBox.getCenter(new THREE.Vector3());
-        assemblyGroup.position.sub(newCenter);
-    }
-
-    overallBox = new THREE.Box3().setFromObject(assemblyGroup);
-    const finalSize = overallBox.getSize(new THREE.Vector3());
-    const finalMax = Math.max(finalSize.x, finalSize.y, finalSize.z);
-    const distance = Math.max(finalMax * 1.6, 1.5);
-    baseCameraDistance = distance;
-
-    resetCamera();
-}
-
-/* ============================================================
-   CREATE LABELS
-   ============================================================ */
-
-function createBadges() {
-    labelsContainer.innerHTML = "";
-    let number = 1;
-
-    loadedModules.forEach(model => {
-        const badge = document.createElement("div");
-        badge.className = "annotation-badge";
-        badge.innerHTML = `<div class="badge-title"><span>${String(number).padStart(2,"0")}</span>${model.userData.name}</div><div class="badge-meta">PN: ${model.userData.pno} | MAT: ${model.userData.mat}</div>`;
-        number++;
-
-        badge.addEventListener("pointerdown", event => {
-            event.stopPropagation();
-            selectModule(model);
-        });
-
-        badge.addEventListener("pointerenter", event => {
-            selectModule(model);
-        });
-
-        labelsContainer.appendChild(badge);
-        model.userData.badgeEl = badge;
-    });
-}
-
-/* ============================================================
-   TEXT TO SPEECH
-   ============================================================ */
-
-function readPanel(model) {
-    if (!isNarrating || !ttsSynth) return;
-    ttsSynth.cancel();
+<body class="selection:bg-draegerCyan selection:text-black">
+
+  <!-- ===================================================================== -->
+  <!-- FIXED BACKGROUND LAYER: INTRO.MP4 VIDEO + THREE.JS 3D VIEWPORT        -->
+  <!-- ===================================================================== -->
+  <div id="viewport-wrapper" class="fixed inset-0 w-full h-full z-0 overflow-hidden telemetry-grid-bg">
     
-    const text = `${model.userData.name}. ${model.userData.desc} Part number: ${model.userData.pno}. Material: ${model.userData.mat}. Specification: ${model.userData.flow}. Standard: ${model.userData.serv}.`;
-    const utterance = new SpeechSynthesisUtterance(text);
-    ttsSynth.speak(utterance);
-}
+    <!-- Stage 00 Hero Background Video (intro.mp4) -->
+    <video
+      id="intro-video"
+      src="./intro.mp4"
+      autoplay
+      muted
+      loop
+      playsinline
+      class="absolute inset-0 w-full h-full object-cover opacity-35 transition-opacity duration-700 pointer-events-none"
+    ></video>
 
-document.getElementById("btn-narrate").addEventListener("click", (e) => {
-    isNarrating = !isNarrating;
-    e.target.innerText = isNarrating ? "🔊 NARRATE: ON" : "🔊 NARRATE: OFF";
-    if (!isNarrating && ttsSynth) {
-        ttsSynth.cancel();
-    } else if (isNarrating && isCarouselMode && activeModuleId) {
-        readPanel(loadedModules.get(activeModuleId));
-    }
-});
+    <!-- Radial Vignette & Scanline Overlay -->
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_25%,#050608_95%)] pointer-events-none z-10"></div>
+    <div class="absolute inset-0 scanline-overlay pointer-events-none z-10"></div>
 
-/* ============================================================
-   CLEAR SELECTION
-   ============================================================ */
+    <!-- Three.js Interactive WebGL Canvas -->
+    <canvas id="three-canvas" class="block w-full h-full relative z-15 cursor-grab active:cursor-grabbing"></canvas>
 
-function clearSelection() {
-    activeModuleId = null;
-    const inspectorPanel = document.querySelector(".inspector");
-    if (inspectorPanel) inspectorPanel.style.display = "none";
-    document.querySelectorAll(".annotation-badge").forEach(badge => {
-        badge.classList.remove("active");
+    <!-- Dynamic 3D Callout Hotspots Container -->
+    <div id="hotspots-layer" class="fixed inset-0 pointer-events-none z-20 overflow-hidden"></div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TOP AEROSPACE TELEMETRY HEADER BAR (FLIGHT12 STYLE)                   -->
+  <!-- ===================================================================== -->
+  <header class="fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-[#050608]/85 backdrop-blur-md">
+    <div class="max-w-[1800px] mx-auto px-4 lg:px-8 h-14 flex items-center justify-between gap-3">
+      
+      <!-- Brand & System Designation -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-draegerCyan animate-pulse"></span>
+          <span class="font-display font-bold tracking-widest text-xs sm:text-sm text-white uppercase">
+            DRÄGER <span class="text-draegerCyan">//</span> PSS® 7000
+          </span>
+        </div>
+        <span class="hidden md:inline-block text-[11px] font-mono text-gray-400 border-l border-white/15 pl-3">
+          SYS.ID: SCBA-EN137-T2 // TELEMETRY TRAINING TERMINAL
+        </span>
+      </div>
+
+      <!-- Center Asset Mount Status Pills -->
+      <div class="hidden xl:flex items-center gap-1.5 font-mono text-[10px]">
+        <span class="text-gray-500 mr-1">DIRECTORY ASSETS:</span>
+        <button onclick="window.focusAssetSubsystem('unit')" id="badge-unit" class="px-2 py-0.5 rounded border border-white/15 bg-white/5 text-gray-300 hover:border-draegerCyan transition">
+          unit.glb <span class="asset-state text-draegerAmber">[CAD]</span>
+        </button>
+        <button onclick="window.focusAssetSubsystem('body')" id="badge-body" class="px-2 py-0.5 rounded border border-white/15 bg-white/5 text-gray-300 hover:border-draegerCyan transition">
+          body.glb <span class="asset-state text-draegerAmber">[CAD]</span>
+        </button>
+        <button onclick="window.focusAssetSubsystem('tank')" id="badge-tank" class="px-2 py-0.5 rounded border border-white/15 bg-white/5 text-gray-300 hover:border-draegerCyan transition">
+          tank.glb <span class="asset-state text-draegerAmber">[CAD]</span>
+        </button>
+        <button onclick="window.focusAssetSubsystem('mask')" id="badge-mask" class="px-2 py-0.5 rounded border border-white/15 bg-white/5 text-gray-300 hover:border-draegerCyan transition">
+          mask.glb <span class="asset-state text-draegerAmber">[CAD]</span>
+        </button>
+        <span id="badge-intro" class="px-2 py-0.5 rounded border border-white/15 bg-white/5 text-gray-300">
+          intro.mp4 <span class="asset-state text-draegerAmber">[SYNTH]</span>
+        </span>
+      </div>
+
+      <!-- Right Action Controls -->
+      <div class="flex items-center gap-1.5 sm:gap-2 font-mono text-[11px]">
+        <button id="btn-free-cam" class="px-2.5 py-1 rounded border border-white/15 bg-white/5 hover:border-draegerCyan hover:text-draegerCyan transition text-gray-200" title="Toggle Free 3D Orbit Camera vs Scroll Lock">
+          [3D ORBIT: ON]
+        </button>
+        <button id="btn-wireframe" class="px-2.5 py-1 rounded border border-white/15 bg-white/5 hover:border-draegerCyan hover:text-draegerCyan transition text-gray-200">
+          [X-RAY CAD]
+        </button>
+        <button id="btn-explode" class="px-2.5 py-1 rounded border border-white/15 bg-white/5 hover:border-draegerCyan hover:text-draegerCyan transition text-gray-200">
+          [EXPLODE]
+        </button>
+        <button id="btn-pass-alarm" class="px-2.5 py-1 rounded border border-draegerCrimson/60 bg-draegerCrimson/15 hover:bg-draegerCrimson/30 text-draegerCrimson font-semibold transition">
+          [PASS ALARM]
+        </button>
+        <button id="btn-open-loader" class="px-2.5 py-1 rounded border border-draegerCyan/60 bg-draegerCyan/10 hover:bg-draegerCyan/25 text-draegerCyan font-semibold transition">
+          [MOUNT GLB/MP4]
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- LEFT VERTICAL CHAPTER PROGRESS RAIL (FLIGHT12 SCROLL TIMELINE)        -->
+  <!-- ===================================================================== -->
+  <aside class="fixed left-4 lg:left-7 top-1/2 -translate-y-1/2 z-30 hidden md:flex flex-col gap-3 font-mono text-[11px]">
+    <div class="panel-glass corner-brackets px-2.5 py-3 rounded flex flex-col gap-3 w-44">
+      <div class="flex items-center justify-between border-b border-white/10 pb-1.5 text-[10px] text-gray-400">
+        <span>MISSION TIMELINE</span>
+        <span id="scroll-pct-readout" class="text-draegerCyan">00%</span>
+      </div>
+
+      <button onclick="window.scrollToStage(0)" data-rail="0" class="rail-btn text-left flex items-center gap-2 text-draegerCyan font-semibold transition">
+        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+        <span>00 // INTRO & OVERVIEW</span>
+      </button>
+      <button onclick="window.scrollToStage(1)" data-rail="1" class="rail-btn text-left flex items-center gap-2 text-gray-400 hover:text-white transition">
+        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+        <span>01 // UNIT.GLB SYSTEM</span>
+      </button>
+      <button onclick="window.scrollToStage(2)" data-rail="2" class="rail-btn text-left flex items-center gap-2 text-gray-400 hover:text-white transition">
+        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+        <span>02 // BODY.GLB HARNESS</span>
+      </button>
+      <button onclick="window.scrollToStage(3)" data-rail="3" class="rail-btn text-left flex items-center gap-2 text-gray-400 hover:text-white transition">
+        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+        <span>03 // TANK.GLB 300 BAR</span>
+      </button>
+      <button onclick="window.scrollToStage(4)" data-rail="4" class="rail-btn text-left flex items-center gap-2 text-gray-400 hover:text-white transition">
+        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+        <span>04 // MASK.GLB + HUD</span>
+      </button>
+      <button onclick="window.scrollToStage(5)" data-rail="5" class="rail-btn text-left flex items-center gap-2 text-gray-400 hover:text-white transition">
+        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+        <span>05 // PRE-WEAR CHECK</span>
+      </button>
+
+      <!-- Explode Factor Slider -->
+      <div class="pt-2 border-t border-white/10">
+        <div class="flex justify-between text-[10px] text-gray-400 mb-1">
+          <span>ASSEMBLY SEPARATION</span>
+          <span id="explode-val" class="text-draegerCyan">0%</span>
+        </div>
+        <input id="slider-explode" type="range" min="0" max="100" value="0" class="w-full" />
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================================================================== -->
+  <!-- RIGHT / BOTTOM INTERACTIVE BODYGUARD® 7000 & FPS HUD SIMULATOR        -->
+  <!-- ===================================================================== -->
+  <aside class="fixed bottom-4 right-4 lg:right-7 z-30 w-[calc(100vw-2rem)] sm:w-80 font-mono">
+    <div id="bodyguard-panel" class="panel-glass corner-brackets rounded p-3.5 shadow-2xl transition-all">
+      
+      <!-- Header: Bodyguard 7000 Electronic Monitoring Unit -->
+      <div class="flex items-center justify-between border-b border-white/10 pb-2 mb-2.5">
+        <div>
+          <div class="text-[10px] text-gray-400 uppercase">DRÄGER BODYGUARD® 7000</div>
+          <div class="text-xs font-bold text-white flex items-center gap-1.5">
+            <span>LIVE PNEUMATIC TELEMETRY</span>
+          </div>
+        </div>
+        <span id="bg-status-pill" class="px-2 py-0.5 text-[10px] rounded bg-draegerEmerald/15 border border-draegerEmerald/50 text-draegerEmerald font-semibold">
+          NOMINAL
+        </span>
+      </div>
+
+      <!-- FPS 7000 Wireless Head-Up Display (HUD) LED Bar -->
+      <div class="bg-black/60 border border-white/10 rounded p-2 mb-2.5">
+        <div class="flex items-center justify-between text-[10px] text-gray-400 mb-1.5">
+          <span>FPS® 7000 IN-MASK WIRELESS HUD</span>
+          <span id="hud-pattern-text" class="text-draegerEmerald">4x GREEN (100–75%)</span>
+        </div>
+        <div class="grid grid-cols-4 gap-2">
+          <div id="hud-led-1" class="h-2.5 rounded-sm bg-draegerCrimson/20 border border-white/10 transition-all"></div>
+          <div id="hud-led-2" class="h-2.5 rounded-sm bg-draegerAmber/20 border border-white/10 transition-all"></div>
+          <div id="hud-led-3" class="h-2.5 rounded-sm bg-draegerEmerald border border-white/20 shadow-[0_0_8px_#00e676] transition-all"></div>
+          <div id="hud-led-4" class="h-2.5 rounded-sm bg-draegerEmerald border border-white/20 shadow-[0_0_8px_#00e676] transition-all"></div>
+        </div>
+      </div>
+
+      <!-- Digital LCD Readout Grid -->
+      <div class="grid grid-cols-3 gap-2 mb-2.5 text-center">
+        <div class="bg-black/50 border border-white/10 rounded p-2">
+          <div class="text-[9px] text-gray-400">CYLINDER</div>
+          <div id="telemetry-bar" class="text-lg font-bold text-draegerCyan leading-tight">300</div>
+          <div class="text-[9px] text-gray-500">BAR (6.8L)</div>
+        </div>
+        <div class="bg-black/50 border border-white/10 rounded p-2">
+          <div class="text-[9px] text-gray-400">TIME TO WHISTLE</div>
+          <div id="telemetry-ttw" class="text-lg font-bold text-white leading-tight">42</div>
+          <div class="text-[9px] text-gray-500">MIN (@55 BAR)</div>
+        </div>
+        <div class="bg-black/50 border border-white/10 rounded p-2">
+          <div class="text-[9px] text-gray-400">AIR VOLUME</div>
+          <div id="telemetry-liters" class="text-lg font-bold text-draegerEmerald leading-tight">2040</div>
+          <div class="text-[9px] text-gray-500">LITRES FREE</div>
+        </div>
+      </div>
+
+      <!-- Interactive Pressure Slider -->
+      <div class="mb-2.5">
+        <div class="flex justify-between text-[10px] text-gray-300 mb-1">
+          <span>SIMULATE CYLINDER PRESSURE</span>
+          <span id="whistle-indicator" class="text-gray-500">WHISTLE: STANDBY (&lt;55 BAR)</span>
+        </div>
+        <input id="slider-pressure" type="range" min="0" max="300" value="300" class="w-full" />
+      </div>
+
+      <!-- Exertion / Breathing Rate Selector + Auto-Breathe Toggle -->
+      <div class="flex items-center justify-between gap-1.5 text-[10px]">
+        <div class="flex items-center gap-1">
+          <button data-rate="20" class="rate-btn px-2 py-1 rounded border border-white/15 bg-white/5 text-gray-300 hover:border-draegerCyan">
+            20 L/m
+          </button>
+          <button data-rate="40" class="rate-btn px-2 py-1 rounded border border-draegerCyan bg-draegerCyan/15 text-draegerCyan font-semibold">
+            40 L/m
+          </button>
+          <button data-rate="85" class="rate-btn px-2 py-1 rounded border border-white/15 bg-white/5 text-gray-300 hover:border-draegerCyan">
+            85 L/m
+          </button>
+        </div>
+        <button id="btn-auto-breathe" class="px-2.5 py-1 rounded border border-white/15 bg-white/5 hover:border-draegerEmerald text-gray-300">
+          [AUTO DRAIN: OFF]
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN SCROLLYTELLING CONTENT TRACK (6 TRAINING STAGES)                 -->
+  <!-- ===================================================================== -->
+  <main class="relative z-20 pointer-events-none">
+
+    <!-- ================================================================= -->
+    <!-- STAGE 00 // HERO & SYSTEM OVERVIEW (intro.mp4 + unit.glb)          -->
+    <!-- ================================================================= -->
+    <section id="stage-0" data-stage="0" class="min-h-screen flex flex-col justify-between pt-20 pb-12 px-4 sm:px-8 lg:px-16 max-w-[1800px] mx-auto">
+      
+      <!-- Top Telemetry Sub-Header -->
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-3 font-mono text-xs text-gray-400">
+        <div>MISSION BRIEF // DRÄGER PSS® 7000 PERSONAL SAFETY SYSTEM</div>
+        <div class="flex items-center gap-4">
+          <span>ATEX: I M1 / II 1GD EEx ia I/IIC T4</span>
+          <span class="text-draegerCyan">EN 137:2006 TYPE 2 // vfdb 0802</span>
+        </div>
+      </div>
+
+      <!-- Center-Left Hero Title Block -->
+      <div class="my-auto max-w-2xl pointer-events-auto">
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded border border-draegerCyan/40 bg-draegerCyan/10 font-mono text-[11px] text-draegerCyan mb-4">
+          <span>STAGE 00 // OPERATIONAL TELEMETRY & FAMILIARISATION</span>
+        </div>
+        <h1 class="font-display text-4xl sm:text-6xl font-bold tracking-tight text-white uppercase leading-[1.05] mb-4">
+          DRÄGER <span class="text-draegerCyan">PSS® 7000</span><br/>
+          FIREFIGHTER BA
+        </h1>
+        <p class="text-gray-300 text-sm sm:text-base leading-relaxed mb-6">
+          Developed by professionals for professionals, the <strong class="text-white">Dräger PSS® 7000</strong> breathing apparatus represents a major milestone in the continuing evolution of respiratory protection for tactical firefighters. Scroll through this telemetry deck to inspect each modular assembly (<code class="text-draegerCyan font-mono">unit.glb</code>, <code class="text-draegerCyan font-mono">body.glb</code>, <code class="text-draegerCyan font-mono">tank.glb</code>, <code class="text-draegerCyan font-mono">mask.glb</code>) and complete pre-entry operational verification.
+        </p>
+
+        <!-- Primary KPI Telemetry Strip -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono mb-6">
+          <div class="panel-glass corner-brackets p-3 rounded">
+            <div class="text-[10px] text-gray-400">COMPLETE MASS</div>
+            <div class="text-xl font-bold text-white mt-0.5">12.2 <span class="text-xs text-draegerCyan">KG</span></div>
+            <div class="text-[10px] text-gray-500">W/ MASK & 6.8L CYL</div>
+          </div>
+          <div class="panel-glass corner-brackets p-3 rounded">
+            <div class="text-[10px] text-gray-400">OPERATING TEMP</div>
+            <div class="text-xl font-bold text-white mt-0.5">-30/+60 <span class="text-xs text-draegerCyan">°C</span></div>
+            <div class="text-[10px] text-gray-500">THERMAL RATED</div>
+          </div>
+          <div class="panel-glass corner-brackets p-3 rounded">
+            <div class="text-[10px] text-gray-400">MAX LDV AIRFLOW</div>
+            <div class="text-xl font-bold text-white mt-0.5">&gt;1,000 <span class="text-xs text-draegerCyan">L/M</span></div>
+            <div class="text-[10px] text-gray-500">7.5 BAR REDUCER</div>
+          </div>
+          <div class="panel-glass corner-brackets p-3 rounded">
+            <div class="text-[10px] text-gray-400">PASS ALARM</div>
+            <div class="text-xl font-bold text-white mt-0.5">102–112 <span class="text-xs text-draegerAmber">dBA</span></div>
+            <div class="text-[10px] text-gray-500">BODYGUARD® 7000</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 font-mono text-xs">
+          <button onclick="window.scrollToStage(1)" class="px-4 py-2.5 rounded bg-draegerCyan text-black font-bold hover:bg-white transition">
+            INITIATE SUBSYSTEM INSPECTION ↓
+          </button>
+          <button onclick="document.getElementById('btn-open-loader').click()" class="px-4 py-2.5 rounded border border-white/20 bg-white/5 text-gray-200 hover:border-draegerCyan transition">
+            LOAD LOCAL .GLB / .MP4 FILES
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom Scroll Cue -->
+      <div class="flex items-center gap-3 font-mono text-[11px] text-gray-400">
+        <span class="inline-block w-2 h-2 rounded-full bg-draegerCyan animate-ping"></span>
+        <span>SCROLL TO INTERPOLATE CAMERA & ISOLATE GLB ASSEMBLIES // DRAG CANVAS TO ORBIT</span>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- STAGE 01 // COMPLETE SYSTEM ARCHITECTURE (unit.glb)               -->
+    <!-- ================================================================= -->
+    <section id="stage-1" data-stage="1" class="min-h-screen flex items-center py-24 px-4 sm:px-8 lg:px-16 max-w-[1800px] mx-auto">
+      <div class="w-full lg:w-[440px] lg:ml-48 pointer-events-auto">
+        <div class="panel-glass corner-brackets rounded-md p-6 shadow-2xl">
+          <div class="flex items-center justify-between font-mono text-xs text-draegerCyan mb-2">
+            <span>STAGE 01 // COMPLETE ASSEMBLY</span>
+            <span class="px-2 py-0.5 rounded bg-draegerCyan/10 border border-draegerCyan/30">ASSET: unit.glb</span>
+          </div>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-white uppercase mb-3">
+            INTEGRATED ELECTRONIC & PNEUMATIC ARCHITECTURE
+          </h2>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            The <strong class="text-white">Dräger PSS® 7000</strong> integrates power supply, pressure reducer, and telemetry hoses directly into the carbon-fiber backplate cavity to eliminate snagging hazards in structural firefighting environments.
+          </p>
+
+          <!-- Technical Spec Table -->
+          <div class="border-t border-white/10 pt-3 space-y-2.5 font-mono text-xs">
+            <div class="flex justify-between">
+              <span class="text-gray-400">BACKPLATE WITH MONITOR:</span>
+              <span class="text-white font-semibold">4.40 kg</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">1ST STAGE OUTPUT PRESSURE:</span>
+              <span class="text-draegerCyan font-semibold">7.5 bar (Nominal)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">POWER SUPPLY MODULE:</span>
+              <span class="text-white font-semibold">5 × 1.5V AA (&gt;365 hrs)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">HOSE PROTECTION SLEEVES:</span>
+              <span class="text-draegerEmerald font-semibold">Reflective &amp; Photoluminescent</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">TELEMETRY LINK:</span>
+              <span class="text-white font-semibold">PSS® Merlin® Radio Ready</span>
+            </div>
+          </div>
+
+          <!-- Training Key Points -->
+          <div class="mt-5 p-3 rounded bg-white/5 border border-white/10 text-xs text-gray-300 space-y-1.5">
+            <div class="font-mono text-[11px] text-draegerAmber font-semibold uppercase">Instructor Note // Modularity</div>
+            <p>All electronic modules and pneumatic hoses feature a central backplate power supply module and snap-fit routing channels so gauges and lung demand valves can be configured for left- or right-shoulder preference.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- STAGE 02 // CARRYING SYSTEM & BACKPLATE (body.glb)                -->
+    <!-- ================================================================= -->
+    <section id="stage-2" data-stage="2" class="min-h-screen flex items-center py-24 px-4 sm:px-8 lg:px-16 max-w-[1800px] mx-auto">
+      <div class="w-full lg:w-[460px] lg:ml-48 pointer-events-auto">
+        <div class="panel-glass corner-brackets rounded-md p-6 shadow-2xl">
+          <div class="flex items-center justify-between font-mono text-xs text-draegerCyan mb-2">
+            <span>STAGE 02 // ERGONOMIC CARRIER</span>
+            <span class="px-2 py-0.5 rounded bg-draegerCyan/10 border border-draegerCyan/30">ASSET: body.glb</span>
+          </div>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-white uppercase mb-3">
+            3-POINT HEIGHT-ADJUSTABLE CARBON BACKPLATE
+          </h2>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            To ensure optimal load distribution on the iliac crest (hips) rather than the firefighter’s spine, the high-strength carbon-fiber composite backplate pairs a <strong class="text-white">3-position torso height adjustment</strong> with a dynamically <strong class="text-white">sliding and pivoting waist belt</strong>.
+          </p>
+
+          <!-- Subsystem Highlights -->
+          <div class="space-y-3 text-xs">
+            <div class="p-3 rounded bg-black/40 border border-white/10">
+              <div class="font-mono text-draegerCyan font-semibold mb-0.5">01 // VULCANISED ARAMID HARNESS WEBBING</div>
+              <p class="text-gray-300">Compression-molded cushioning with high-temperature Aramid blend webbing and high-friction anti-slip shoulder surfaces resist wear, chemical ingress, and heat.</p>
+            </div>
+            <div class="p-3 rounded bg-black/40 border border-white/10">
+              <div class="font-mono text-draegerCyan font-semibold mb-0.5">02 // SLIDE-AND-LOCK TOOL-FREE RELEASE</div>
+              <p class="text-gray-300">Shoulder and waist harness attachments disconnect from the backplate without tools via Dräger's slide-and-lock mechanism for rapid post-incident decontamination.</p>
+            </div>
+            <div class="p-3 rounded bg-black/40 border border-white/10">
+              <div class="font-mono text-draegerCyan font-semibold mb-0.5">03 // SNAP-FIT 1ST STAGE PRESSURE REDUCER</div>
+              <p class="text-gray-300">Secured by a single retaining pin, allowing rapid replacement of the complete pneumatic assembly in the workshop.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- STAGE 03 // COMPRESSED AIR SUPPLY & QUICKCONNECT (tank.glb)       -->
+    <!-- ================================================================= -->
+    <section id="stage-3" data-stage="3" class="min-h-screen flex items-center py-24 px-4 sm:px-8 lg:px-16 max-w-[1800px] mx-auto">
+      <div class="w-full lg:w-[460px] lg:ml-48 pointer-events-auto">
+        <div class="panel-glass corner-brackets rounded-md p-6 shadow-2xl">
+          <div class="flex items-center justify-between font-mono text-xs text-draegerCyan mb-2">
+            <span>STAGE 03 // HIGH-PRESSURE VESSEL</span>
+            <span class="px-2 py-0.5 rounded bg-draegerCyan/10 border border-draegerCyan/30">ASSET: tank.glb</span>
+          </div>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-white uppercase mb-3">
+            6.8L 300 BAR CARBON COMPOSITE &amp; QUICKCONNECT
+          </h2>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            Constructed with a seamless aluminum liner overwrapped in carbon and fiberglass filaments within an epoxy matrix, the <strong class="text-white">6.8L / 300 bar cylinder</strong> reduces weight by up to 50% compared to steel vessels while storing 2,040 litres of breathable air.
+          </p>
+
+          <!-- Specs -->
+          <div class="border-t border-b border-white/10 py-3 my-3 space-y-2 font-mono text-xs">
+            <div class="flex justify-between">
+              <span class="text-gray-400">WORKING / TEST PRESSURE:</span>
+              <span class="text-draegerCyan font-semibold">300 bar / 450 bar</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">NOMINAL AIR CAPACITY:</span>
+              <span class="text-white font-semibold">2,040 Litres (6.8L × 300 bar)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">QUICKCONNECT INTERLOCK:</span>
+              <span class="text-draegerAmber font-semibold">Locks at &gt;5 bar (~70 psi)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">CYLINDER STRAP SYSTEM:</span>
+              <span class="text-white font-semibold">Single or Twin Cylinder Cam-Lock</span>
+            </div>
+          </div>
+
+          <div class="p-3 rounded bg-draegerAmber/10 border border-draegerAmber/40 text-xs text-gray-200">
+            <div class="font-mono text-draegerAmber font-bold mb-1">SAFETY PROTOCOL // QUICKCONNECT COUPLING</div>
+            Quarter-turn QuickConnect allows cylinder swaps in seconds via a push-and-turn action. A pneumatic safety lock prevents disconnection while the reducer is pressurized above 5 bar. Always bleed system via the LDV before uncoupling.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- STAGE 04 // RESPIRATORY INTERFACE & WIRELESS HUD (mask.glb)        -->
+    <!-- ================================================================= -->
+    <section id="stage-4" data-stage="4" class="min-h-screen flex items-center py-24 px-4 sm:px-8 lg:px-16 max-w-[1800px] mx-auto">
+      <div class="w-full lg:w-[460px] lg:ml-48 pointer-events-auto">
+        <div class="panel-glass corner-brackets rounded-md p-6 shadow-2xl">
+          <div class="flex items-center justify-between font-mono text-xs text-draegerCyan mb-2">
+            <span>STAGE 04 // RESPIRATORY INTERFACE</span>
+            <span class="px-2 py-0.5 rounded bg-draegerCyan/10 border border-draegerCyan/30">ASSET: mask.glb</span>
+          </div>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-white uppercase mb-3">
+            DRÄGER FPS® 7000 FULL-FACE MASK, LDV &amp; HUD
+          </h2>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            The <strong class="text-white">Dräger FPS® 7000</strong> full-face mask provides a distortion-free polycarbonate visor with a 90% field of vision, a hypoallergenic EPDM double-sealing facial skirt (Sizes S, M, L), and an ergonomic 5-point head harness or helmet-mask adapter.
+          </p>
+
+          <div class="space-y-2.5 text-xs mb-4">
+            <div class="p-2.5 rounded bg-black/40 border border-white/10">
+              <span class="font-mono text-draegerCyan font-semibold">PLUS LUNG DEMAND VALVE (LDV):</span>
+              <span class="text-gray-300 block mt-0.5">Balanced piston design delivers &gt;1,000 L/min on first inhalation with positive-pressure standby switch-off and front bypass purge button.</span>
+            </div>
+            <div class="p-2.5 rounded bg-black/40 border border-white/10">
+              <span class="font-mono text-draegerEmerald font-semibold">WIRELESS FPS® 7000 HEAD-UP DISPLAY:</span>
+              <span class="text-gray-300 block mt-0.5">Snaps inside the mask without tools. Automatically pairs via short-range encrypted radio with the Bodyguard® 7000, auto-adjusting LED brightness to ambient smoke/fire conditions.</span>
+            </div>
+          </div>
+
+          <!-- HUD Legend -->
+          <div class="font-mono text-[11px] bg-black/60 border border-white/10 rounded p-3 space-y-1.5">
+            <div class="text-gray-400 border-b border-white/10 pb-1">HUD LED PRESSURE INDICATION LOGIC</div>
+            <div class="flex items-center justify-between">
+              <span class="text-draegerEmerald">● ● ● ● 4 GREEN</span>
+              <span class="text-gray-300">300 – 225 BAR (100–75%)</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-draegerEmerald">● ● ● ○ 3 GREEN</span>
+              <span class="text-gray-300">225 – 150 BAR (75–50%)</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-draegerAmber">● ● ○ ○ 2 AMBER</span>
+              <span class="text-gray-300">150 – 75 BAR (50–25%)</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-draegerCrimson">● ○ ○ ○ FLASHING RED</span>
+              <span class="text-gray-300">&lt;60 BAR (RETREAT / WHISTLE)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- STAGE 05 // INTERACTIVE PRE-WEAR DONNING CHECKLIST & ASSESSMENT    -->
+    <!-- ================================================================= -->
+    <section id="stage-5" data-stage="5" class="min-h-screen flex items-center py-24 px-4 sm:px-8 lg:px-16 max-w-[1800px] mx-auto">
+      <div class="w-full lg:w-[540px] lg:ml-48 pointer-events-auto">
+        <div class="panel-glass corner-brackets rounded-md p-6 shadow-2xl">
+          <div class="flex items-center justify-between font-mono text-xs text-draegerCyan mb-2">
+            <span>STAGE 05 // OPERATIONAL COMPETENCY</span>
+            <span id="checklist-score" class="px-2 py-0.5 rounded bg-draegerEmerald/15 border border-draegerEmerald/40 text-draegerEmerald">0 / 6 VERIFIED</span>
+          </div>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-white uppercase mb-2">
+            PRE-ENTRY BA DONNING &amp; LEAK TEST PROTOCOL
+          </h2>
+          <p class="text-gray-300 text-xs sm:text-sm mb-4">
+            Complete the mandatory 6-step Dräger PSS® 7000 operational verification procedure before structural entry. Click each item as you verify the telemetry response.
+          </p>
+
+          <!-- Interactive Checklist -->
+          <div id="checklist-container" class="space-y-2 font-mono text-xs mb-5">
+            <label class="flex items-start gap-3 p-2.5 rounded border border-white/10 bg-black/40 hover:border-draegerCyan cursor-pointer transition">
+              <input type="checkbox" class="ba-check mt-0.5 accent-[#00f0ff]" />
+              <div>
+                <div class="text-white font-semibold">01. VISUAL &amp; QUICKCONNECT LATCH INSPECTION</div>
+                <div class="text-gray-400 text-[11px]">Verify carbon backplate integrity, Aramid straps fully extended, and 6.8L cylinder cam-strap &amp; QuickConnect locked.</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-2.5 rounded border border-white/10 bg-black/40 hover:border-draegerCyan cursor-pointer transition">
+              <input type="checkbox" class="ba-check mt-0.5 accent-[#00f0ff]" />
+              <div>
+                <div class="text-white font-semibold">02. POSITIVE PRESSURE SWITCH-OFF &amp; VALVE OPEN</div>
+                <div class="text-gray-400 text-[11px]">Press LDV reset button to close positive pressure valve, then slowly open cylinder valve fully. Verify ≥270 bar readout.</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-2.5 rounded border border-white/10 bg-black/40 hover:border-draegerCyan cursor-pointer transition">
+              <input type="checkbox" class="ba-check mt-0.5 accent-[#00f0ff]" />
+              <div>
+                <div class="text-white font-semibold">03. HIGH-PRESSURE SYSTEM LEAK TEST (&lt;10 BAR / MIN)</div>
+                <div class="text-gray-400 text-[11px]">Close cylinder valve and monitor Bodyguard® 7000 digital display for 60 seconds. Pressure drop must not exceed 10 bar.</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-2.5 rounded border border-white/10 bg-black/40 hover:border-draegerCyan cursor-pointer transition">
+              <input type="checkbox" class="ba-check mt-0.5 accent-[#00f0ff]" />
+              <div>
+                <div class="text-white font-semibold">04. PNEUMATIC WARNING WHISTLE THRESHOLD (55±5 BAR)</div>
+                <div class="text-gray-400 text-[11px]">Slowly bleed air via LDV purge and verify acoustic whistle sounds between 60 and 50 bar at &gt;90 dBA.</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-2.5 rounded border border-white/10 bg-black/40 hover:border-draegerCyan cursor-pointer transition">
+              <input type="checkbox" class="ba-check mt-0.5 accent-[#00f0ff]" />
+              <div>
+                <div class="text-white font-semibold">05. BODYGUARD® 7000 ADSU / PASS DISTRESS ALARM</div>
+                <div class="text-gray-400 text-[11px]">Test manual yellow/red distress button and motion-sensor pre-alarm (25s stillness → 8s pre-alarm → full 102–112 dBA alarm).</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-2.5 rounded border border-white/10 bg-black/40 hover:border-draegerCyan cursor-pointer transition">
+              <input type="checkbox" class="ba-check mt-0.5 accent-[#00f0ff]" />
+              <div>
+                <div class="text-white font-semibold">06. FPS® 7000 FACEPIECE SEAL &amp; WIRELESS HUD SYNC</div>
+                <div class="text-gray-400 text-[11px]">Don mask, perform negative-pressure inhalation seal check, click in LDV, and confirm 4 green LEDs inside HUD.</div>
+              </div>
+            </label>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+            <button id="btn-export-cert" class="px-4 py-2 rounded bg-draegerEmerald text-black font-bold hover:bg-white transition">
+              COPY TRAINING VERIFICATION LOG
+            </button>
+            <button onclick="window.scrollToStage(0)" class="px-3 py-2 rounded border border-white/15 bg-white/5 text-gray-300 hover:border-draegerCyan transition">
+              RETURN TO TOP ↑
+            </button>
+          </div>
+          <div id="cert-toast" class="hidden mt-3 p-2 rounded bg-draegerEmerald/20 border border-draegerEmerald text-draegerEmerald font-mono text-xs text-center">
+            ✓ DRÄGER PSS 7000 TRAINING LOG COPIED TO CLIPBOARD
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: DRAG-AND-DROP LOCAL ASSET LOADER (unit/body/tank/mask/intro)  -->
+  <!-- ===================================================================== -->
+  <div id="asset-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="panel-glass corner-brackets rounded-md max-w-xl w-full p-6 shadow-2xl border border-draegerCyan/40">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+        <div>
+          <div class="font-mono text-[10px] text-draegerCyan">LOCAL DIRECTORY ASSET BRIDGE</div>
+          <h3 class="font-display text-xl font-bold text-white uppercase">MOUNT LOCAL .GLB &amp; .MP4 FILES</h3>
+        </div>
+        <button id="btn-close-loader" class="font-mono text-xs px-2.5 py-1 rounded border border-white/15 text-gray-400 hover:text-white">
+          [CLOSE ESC]
+        </button>
+      </div>
+
+      <p class="text-xs text-gray-300 leading-relaxed mb-4">
+        When saved in the same directory as <code class="text-draegerCyan font-mono">body.glb</code>, <code class="text-draegerCyan font-mono">mask.glb</code>, <code class="text-draegerCyan font-mono">tank.glb</code>, <code class="text-draegerCyan font-mono">unit.glb</code>, and <code class="text-draegerCyan font-mono">intro.mp4</code>, this page automatically fetches them via <code class="font-mono">GLTFLoader</code>. You can also drag-and-drop or select your local files right now to hot-swap the live 3D scene immediately:
+      </p>
+
+      <!-- Drag and Drop Zone -->
+      <label id="dropzone" class="flex flex-col items-center justify-center border-2 border-dashed border-draegerCyan/50 hover:border-draegerCyan rounded-md p-8 bg-draegerCyan/5 cursor-pointer transition text-center mb-4">
+        <input id="file-input" type="file" multiple accept=".glb,.gltf,.mp4,.webm" class="hidden" />
+        <div class="font-mono text-sm text-draegerCyan font-bold mb-1">
+          DROP body.glb, mask.glb, tank.glb, unit.glb, intro.mp4 HERE
+        </div>
+        <div class="font-mono text-xs text-gray-400">
+          or click to browse local filesystem (supports multiple selection)
+        </div>
+      </label>
+
+      <!-- Live Asset Table -->
+      <div class="font-mono text-xs space-y-1.5 bg-black/50 p-3 rounded border border-white/10">
+        <div class="flex justify-between">
+          <span class="text-gray-400">./unit.glb (Complete PSS 7000 BA):</span>
+          <span id="modal-status-unit" class="text-draegerAmber">PROCEDURAL CAD FALLBACK ACTIVE</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-400">./body.glb (Carbon Backplate &amp; Harness):</span>
+          <span id="modal-status-body" class="text-draegerAmber">PROCEDURAL CAD FALLBACK ACTIVE</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-400">./tank.glb (6.8L 300 Bar Cylinder):</span>
+          <span id="modal-status-tank" class="text-draegerAmber">PROCEDURAL CAD FALLBACK ACTIVE</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-400">./mask.glb (FPS 7000 Mask + HUD):</span>
+          <span id="modal-status-mask" class="text-draegerAmber">PROCEDURAL CAD FALLBACK ACTIVE</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-400">./intro.mp4 (Hero Background Video):</span>
+          <span id="modal-status-intro" class="text-draegerAmber">CHECKING / SYNTHETIC TELEMETRY</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- THREE.JS 3D ENGINE, GLTF LOADER, PROCEDURAL CAD & TELEMETRY LOGIC     -->
+  <!-- ===================================================================== -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    // -------------------------------------------------------------------------
+    // 1. SCENE, CAMERA, RENDERER & AEROSPACE LIGHTING SETUP
+    // -------------------------------------------------------------------------
+    const canvas = document.getElementById('three-canvas');
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0.4, 0.6, 3.6);
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
     });
-}
-
-/* ============================================================
-   SELECT MODULE
-   ============================================================ */
-
-function selectModule(model) {
-    activeModuleId = model.userData.id;
-    carouselIndex = moduleKeys.indexOf(model.userData.id);
-
-    const inspectorPanel = document.querySelector(".inspector");
-    if (inspectorPanel) inspectorPanel.style.display = "block";
-
-    document.getElementById("insp-tag").innerText = model.userData.tag;
-    document.getElementById("insp-title").innerText = model.userData.name;
-    document.getElementById("insp-desc").innerText = model.userData.desc;
-    document.getElementById("card-pno").innerText = model.userData.pno;
-    document.getElementById("card-mat").innerText = model.userData.mat;
-    document.getElementById("card-flow").innerText = model.userData.flow;
-    document.getElementById("card-serv").innerText = model.userData.serv;
-
-    document.querySelectorAll(".annotation-badge").forEach(badge => {
-        badge.classList.remove("active");
-    });
-
-    if (model.userData.badgeEl) {
-        model.userData.badgeEl.classList.add("active");
-    }
-
-    if (isCarouselMode) {
-        readPanel(model);
-    }
-}
-
-/* ============================================================
-   CONTROLS / CAROUSEL LOGIC
-   ============================================================ */
-
-function updateCarouselState() {
-    isCarouselMode = targetExplodeRatio === 1;
-    carouselNav.style.display = isCarouselMode ? "flex" : "none";
-    controls.enabled = !isCarouselMode;
-    glassBackdrop.visible = isCarouselMode;
-    
-    const btnAssemble = document.getElementById("btn-assemble");
-    const btnExplode = document.getElementById("btn-explode");
-
-    if (isCarouselMode) {
-        btnExplode.classList.add("btn-accent");
-        btnAssemble.classList.remove("btn-accent");
-        if (!activeModuleId) {
-            selectModule(loadedModules.get(moduleKeys[carouselIndex]));
-        } else {
-            readPanel(loadedModules.get(activeModuleId));
-        }
-    } else {
-        btnAssemble.classList.add("btn-accent");
-        btnExplode.classList.remove("btn-accent");
-        if (ttsSynth) ttsSynth.cancel();
-    }
-}
-
-document.getElementById("btn-assemble").addEventListener("click", () => {
-    targetExplodeRatio = 0;
-    updateCarouselState();
-});
-
-document.getElementById("btn-explode").addEventListener("click", () => {
-    targetExplodeRatio = 1;
-    updateCarouselState();
-    resetCamera(); // Snaps camera exactly back to default rotation and look target
-});
-
-document.getElementById("btn-prev").addEventListener("click", () => {
-    carouselIndex = (carouselIndex - 1 + moduleKeys.length) % moduleKeys.length;
-    selectModule(loadedModules.get(moduleKeys[carouselIndex]));
-});
-
-document.getElementById("btn-next").addEventListener("click", () => {
-    carouselIndex = (carouselIndex + 1) % moduleKeys.length;
-    selectModule(loadedModules.get(moduleKeys[carouselIndex]));
-});
-
-/* ============================================================
-   RAYCASTER / POINTER LOGIC
-   ============================================================ */
-
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-window.addEventListener("pointerdown", event => {
-    if (
-        event.target.closest(".control-deck") ||
-        event.target.closest(".inspector") ||
-        event.target.closest(".hud-panel") ||
-        event.target.closest("#intro-container") ||
-        event.target.closest(".header-bar") ||
-        event.target.closest(".annotation-badge") ||
-        event.target.closest(".carousel-nav")
-    ) {
-        return;
-    }
-
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-
-    const models = Array.from(loadedModules.values());
-    const intersections = raycaster.intersectObjects(models, true);
-
-    if (intersections.length === 0) {
-        if (!isCarouselMode) {
-            clearSelection();
-        } else {
-            isDraggingPart = true;
-            previousMouse.x = event.clientX;
-            previousMouse.y = event.clientY;
-        }
-        return;
-    }
-
-    let selected = intersections[0].object;
-    while (selected.parent && !models.includes(selected)) {
-        selected = selected.parent;
-    }
-
-    if (models.includes(selected)) {
-        selectModule(selected);
-        if (isCarouselMode) {
-            isDraggingPart = true;
-            previousMouse.x = event.clientX;
-            previousMouse.y = event.clientY;
-        }
-    } else if (!isCarouselMode) {
-        clearSelection();
-    }
-});
-
-window.addEventListener("pointermove", event => {
-    if (isCarouselMode && isDraggingPart && activeModuleId) {
-        const deltaX = event.clientX - previousMouse.x;
-        const deltaY = event.clientY - previousMouse.y;
-        const activeModel = loadedModules.get(activeModuleId);
-        
-        if (activeModel) {
-            activeModel.rotation.y += deltaX * 0.01;
-            activeModel.rotation.x += deltaY * 0.01;
-        }
-        
-        previousMouse.x = event.clientX;
-        previousMouse.y = event.clientY;
-        return;
-    }
-
-    if (
-        event.target.closest(".control-deck") ||
-        event.target.closest(".inspector") ||
-        event.target.closest(".hud-panel") ||
-        event.target.closest("#intro-container") ||
-        event.target.closest(".header-bar") ||
-        event.target.closest(".annotation-badge") ||
-        event.target.closest(".carousel-nav")
-    ) {
-        return;
-    }
-
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-});
-
-window.addEventListener("pointerup", () => {
-    isDraggingPart = false;
-});
-
-/* ============================================================
-   LABEL POSITIONS + LEADER LINES
-   ============================================================ */
-
-function updateLabels() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    if (leaderCanvas.width !== width || leaderCanvas.height !== height) {
-        leaderCanvas.width = width;
-        leaderCanvas.height = height;
-    }
-
-    ctx.clearRect(0, 0, width, height);
-
-    loadedModules.forEach(model => {
-        const badge = model.userData.badgeEl;
-        if (!badge) return;
-
-        const worldPosition = model.localToWorld(model.userData.localCenter.clone());
-        const projected = worldPosition.clone().project(camera);
-
-        if (projected.z > 1) {
-            badge.style.display = "none";
-            return;
-        }
-
-        badge.style.display = "block";
-
-        const screenX = (projected.x * 0.5 + 0.5) * width;
-        const screenY = (-projected.y * 0.5 + 0.5) * height;
-
-        if (!model.userData.side) {
-            model.userData.side = screenX > width / 2 ? "right" : "left";
-        } else {
-            const buffer = 50;
-            if (model.userData.side === "left" && screenX > width / 2 + buffer) {
-                model.userData.side = "right";
-            } else if (model.userData.side === "right" && screenX < width / 2 - buffer) {
-                model.userData.side = "left";
-            }
-        }
-
-        const right = model.userData.side === "right";
-        const offset = 110;
-        const badgeX = right ? screenX + offset : screenX - offset - badge.offsetWidth;
-
-        badge.style.left = `${badgeX}px`;
-        badge.style.top = `${screenY}px`;
-
-        ctx.beginPath();
-        ctx.strokeStyle = model.userData.id === activeModuleId ? "#ea580c" : "rgba(234,88,12,0.4)";
-        ctx.lineWidth = model.userData.id === activeModuleId ? 2 : 1;
-        ctx.moveTo(screenX, screenY);
-        ctx.lineTo(screenX + (right ? 30 : -30), screenY);
-        ctx.lineTo(right ? badgeX : badgeX + badge.offsetWidth, screenY);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.fillStyle = "#ea580c";
-        ctx.arc(screenX, screenY, 3, 0, Math.PI * 2);
-        ctx.fill();
-    });
-}
-
-/* ============================================================
-   ANIMATION
-   ============================================================ */
-
-function animate() {
-    requestAnimationFrame(animate);
-
-    currentExplodeRatio += (targetExplodeRatio - currentExplodeRatio) * 0.10;
-
-    if (isCarouselMode) {
-        camera.position.lerp(new THREE.Vector3(0, 0, baseCameraDistance * 0.7), 0.05);
-        controls.target.lerp(new THREE.Vector3(0, 0, 0), 0.05);
-        camera.lookAt(controls.target);
-    } else {
-        controls.target.lerp(new THREE.Vector3(0, 0, 0), 0.05);
-    }
-
-    loadedModules.forEach((model, key) => {
-        const original = model.userData.initialPosition;
-
-        if (isCarouselMode) {
-            if (model.userData.id === activeModuleId) {
-                model.position.lerp(new THREE.Vector3(0, 0, 0), 0.1);
-            } else {
-                const keyIndex = moduleKeys.indexOf(key);
-                const offset = keyIndex - carouselIndex;
-                const angle = offset * (Math.PI * 2) / moduleKeys.length;
-                const radius = 6;
-                const targetPos = new THREE.Vector3(
-                    Math.sin(angle) * radius,
-                    0,
-                    Math.cos(angle) * radius - 3
-                );
-                model.position.lerp(targetPos, 0.1);
-                model.quaternion.slerp(new THREE.Quaternion(), 0.1);
-            }
-        } else {
-            const direction = model.userData.vector.clone().multiplyScalar(currentExplodeRatio);
-            const targetPos = original.clone().add(direction);
-            model.position.lerp(targetPos, 0.1);
-            model.quaternion.slerp(new THREE.Quaternion(), 0.1);
-        }
-    });
-
-    if (!isCarouselMode) controls.update();
-
-    renderer.render(scene, camera);
-    updateLabels();
-}
-
-/* ============================================================
-   RESIZE
-   ============================================================ */
-
-window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    leaderCanvas.width = window.innerWidth;
-    leaderCanvas.height = window.innerHeight;
-});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
 
-/* ============================================================
-   INTRO VIDEO LOGIC
-   ============================================================ */
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enableZoom = false; // Keep wheel scrolling smooth for scrollytelling
+    controls.target.set(0, 0.2, 0);
 
-const introContainer = document.getElementById("intro-container");
-const introVideo = document.getElementById("intro-video");
+    // Studio & Rim Lighting (Flight12 style high-contrast specular edge lighting)
+    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.75);
+    scene.add(ambientLight);
 
-if (introVideo) {
-    introVideo.addEventListener("ended", () => {
-        introContainer.style.opacity = "0";
-        setTimeout(() => {
-            introContainer.style.display = "none";
-        }, 800);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    keyLight.position.set(4, 6, 5);
+    scene.add(keyLight);
+
+    const cyanRimLight = new THREE.DirectionalLight(0x00f0ff, 1.8);
+    cyanRimLight.position.set(-5, 3, -4);
+    scene.add(cyanRimLight);
+
+    const amberBottomLight = new THREE.DirectionalLight(0xff9e00, 0.9);
+    amberBottomLight.position.set(2, -5, 2);
+    scene.add(amberBottomLight);
+
+    // Subtle Telemetry Reference Grid Floor
+    const gridHelper = new THREE.GridHelper(12, 24, 0x00f0ff, 0x1e293b);
+    gridHelper.position.y = -1.35;
+    gridHelper.material.opacity = 0.22;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
+
+    // Master SCBA Root Group & 4 Subsystem Containers corresponding to user's GLB files
+    const scbaRoot = new THREE.Group();
+    scene.add(scbaRoot);
+
+    const groups = {
+      unit: new THREE.Group(), // Complete assembly overlay / hoses / Bodyguard 7000
+      body: new THREE.Group(), // body.glb: Carbon backplate + Aramid harness + waist belt
+      tank: new THREE.Group(), // tank.glb: 6.8L 300 bar cylinder + QuickConnect valve
+      mask: new THREE.Group()  // mask.glb: FPS 7000 full-face mask + LDV + wireless HUD
+    };
+
+    scbaRoot.add(groups.unit);
+    scbaRoot.add(groups.body);
+    scbaRoot.add(groups.tank);
+    scbaRoot.add(groups.mask);
+
+    // Base rest offsets for Exploded View animation
+    const baseOffsets = {
+      unit: new THREE.Vector3(0, 0, 0),
+      body: new THREE.Vector3(0, 0, -0.08),
+      tank: new THREE.Vector3(0, 0.12, -0.26),
+      mask: new THREE.Vector3(0, 0.52, 0.34)
+    };
+
+    const explodeVectors = {
+      unit: new THREE.Vector3(0, 0, 0),
+      body: new THREE.Vector3(-0.45, -0.15, -0.35),
+      tank: new THREE.Vector3(0.45, 0.25, -0.65),
+      mask: new THREE.Vector3(0.0, 0.45, 0.75)
+    };
+
+    // -------------------------------------------------------------------------
+    // 2. HIGH-DETAIL PROCEDURAL CAD GENERATOR (FALLBACK UNTIL LOCAL GLB LOADS)
+    // -------------------------------------------------------------------------
+    const cadMaterials = {
+      carbon: new THREE.MeshStandardMaterial({ color: 0x1a1d24, roughness: 0.38, metalness: 0.45 }),
+      aramid: new THREE.MeshStandardMaterial({ color: 0x262930, roughness: 0.75, metalness: 0.15 }),
+      cylinderYellow: new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.25, metalness: 0.2 }),
+      cylinderCarbon: new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.3, metalness: 0.5 }),
+      steel: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.2, metalness: 0.88 }),
+      cyanGlow: new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.65 }),
+      amberGlow: new THREE.MeshStandardMaterial({ color: 0xff9e00, emissive: 0xff9e00, emissiveIntensity: 0.55 }),
+      emeraldGlow: new THREE.MeshStandardMaterial({ color: 0x00e676, emissive: 0x00e676, emissiveIntensity: 0.85 }),
+      visorGlass: new THREE.MeshPhysicalMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.42,
+        roughness: 0.1,
+        metalness: 0.1,
+        transmission: 0.5
+      })
+    };
+
+    function buildProceduralCAD() {
+      // --- 1. BODY.GLB (Carbon-Fiber Backplate, Pivoting Waist Belt, Aramid Harness) ---
+      const bodyAssembly = new THREE.Group();
+
+      // Ergonomic contoured carbon backplate frame
+      const plateGeo = new THREE.BoxGeometry(0.62, 1.25, 0.08);
+      const plateMesh = new THREE.Mesh(plateGeo, cadMaterials.carbon);
+      bodyAssembly.add(plateMesh);
+
+      // Central ventilation & battery compartment Spine
+      const spineGeo = new THREE.BoxGeometry(0.24, 1.1, 0.12);
+      const spineMesh = new THREE.Mesh(spineGeo, cadMaterials.aramid);
+      spineMesh.position.set(0, 0, 0.02);
+      bodyAssembly.add(spineMesh);
+
+      // 3-Point Height Adjustment Slots
+      for (let i = -1; i <= 1; i++) {
+        const slot = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.14), cadMaterials.cyanGlow);
+        slot.position.set(0, 0.35 + i * 0.08, 0.02);
+        bodyAssembly.add(slot);
+      }
+
+      // Sliding & Pivoting Waist Belt Assembly
+      const beltTorus = new THREE.Mesh(
+        new THREE.TorusGeometry(0.42, 0.065, 16, 48, Math.PI * 1.25),
+        cadMaterials.aramid
+      );
+      beltTorus.rotation.x = Math.PI / 2;
+      beltTorus.rotation.z = -Math.PI * 0.12;
+      beltTorus.position.set(0, -0.58, 0.22);
+      bodyAssembly.add(beltTorus);
+
+      // Stainless steel pivot joint
+      const pivotJoint = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 24), cadMaterials.steel);
+      pivotJoint.rotation.x = Math.PI / 2;
+      pivotJoint.position.set(0, -0.52, -0.02);
+      bodyAssembly.add(pivotJoint);
+
+      // Left & Right Compression-Molded Shoulder Straps with Photoluminescent Trim
+      [-0.23, 0.23].forEach((xPos) => {
+        const strap = new THREE.Mesh(
+          new THREE.TorusGeometry(0.36, 0.048, 14, 40, Math.PI * 1.05),
+          cadMaterials.aramid
+        );
+        strap.rotation.y = Math.PI / 2;
+        strap.position.set(xPos, 0.25, 0.22);
+        bodyAssembly.add(strap);
+
+        const reflectiveStrip = new THREE.Mesh(
+          new THREE.TorusGeometry(0.365, 0.012, 8, 36, Math.PI * 0.8),
+          cadMaterials.cyanGlow
+        );
+        reflectiveStrip.rotation.y = Math.PI / 2;
+        reflectiveStrip.position.set(xPos, 0.25, 0.24);
+        bodyAssembly.add(reflectiveStrip);
+      });
+
+      groups.body.add(bodyAssembly);
+      groups.body.position.copy(baseOffsets.body);
+
+      // --- 2. TANK.GLB (Dräger 6.8L 300 Bar Carbon Composite Cylinder & QuickConnect) ---
+      const tankAssembly = new THREE.Group();
+
+      // Main Cylinder Body
+      const cylBody = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.96, 40), cadMaterials.cylinderYellow);
+      tankAssembly.add(cylBody);
+
+      // Carbon Fiber Overwrap Banding
+      const carbonBand = new THREE.Mesh(new THREE.CylinderGeometry(0.243, 0.243, 0.62, 40), cadMaterials.cylinderCarbon);
+      tankAssembly.add(carbonBand);
+
+      // Top & Bottom Hemispherical Domes
+      const topDome = new THREE.Mesh(new THREE.SphereGeometry(0.24, 36, 20, 0, Math.PI * 2, 0, Math.PI / 2), cadMaterials.cylinderYellow);
+      topDome.position.y = 0.48;
+      tankAssembly.add(topDome);
+
+      const bottomDome = new THREE.Mesh(new THREE.SphereGeometry(0.24, 36, 20, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), cadMaterials.cylinderCarbon);
+      bottomDome.position.y = -0.48;
+      tankAssembly.add(bottomDome);
+
+      // Bottom Cylinder Valve & QuickConnect Coupling
+      const valveNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.22, 24), cadMaterials.steel);
+      valveNeck.position.y = -0.78;
+      tankAssembly.add(valveNeck);
+
+      const handwheel = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.08, 24), cadMaterials.carbon);
+      handwheel.position.set(0, -0.92, 0);
+      tankAssembly.add(handwheel);
+
+      const quickConnectRing = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.02, 16, 32), cadMaterials.amberGlow);
+      quickConnectRing.rotation.x = Math.PI / 2;
+      quickConnectRing.position.y = -0.72;
+      tankAssembly.add(quickConnectRing);
+
+      // Cam-Lock Cylinder Retaining Strap
+      const camStrap = new THREE.Mesh(new THREE.CylinderGeometry(0.252, 0.252, 0.09, 40), cadMaterials.aramid);
+      camStrap.position.y = 0.08;
+      tankAssembly.add(camStrap);
+
+      groups.tank.add(tankAssembly);
+      groups.tank.position.copy(baseOffsets.tank);
+
+      // --- 3. MASK.GLB (Dräger FPS 7000 Full-Face Mask + LDV + Wireless HUD) ---
+      const maskAssembly = new THREE.Group();
+
+      // Outer EPDM Face Seal Frame
+      const maskFrame = new THREE.Mesh(new THREE.SphereGeometry(0.25, 32, 32), cadMaterials.carbon);
+      maskFrame.scale.set(0.92, 1.12, 0.85);
+      maskAssembly.add(maskFrame);
+
+      // Wide Polycarbonate Visor
+      const visor = new THREE.Mesh(new THREE.SphereGeometry(0.235, 32, 24, 0, Math.PI * 2, 0, Math.PI * 0.55), cadMaterials.visorGlass);
+      visor.rotation.x = Math.PI * 0.42;
+      visor.position.set(0, 0.04, 0.06);
+      maskAssembly.add(visor);
+
+      // Plus Lung Demand Valve (LDV) Red/Black Port on Front
+      const ldvHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.14, 28), cadMaterials.carbon);
+      ldvHousing.rotation.x = Math.PI / 2;
+      ldvHousing.position.set(0, -0.11, 0.24);
+      maskAssembly.add(ldvHousing);
+
+      const ldvPurgeCap = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.03, 24), cadMaterials.amberGlow);
+      ldvPurgeCap.rotation.x = Math.PI / 2;
+      ldvPurgeCap.position.set(0, -0.11, 0.31);
+      maskAssembly.add(ldvPurgeCap);
+
+      // Internal Wireless FPS 7000 HUD LED Array
+      const hudBar = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.025, 0.02), cadMaterials.emeraldGlow);
+      hudBar.position.set(0, 0.12, 0.19);
+      maskAssembly.add(hudBar);
+
+      groups.mask.add(maskAssembly);
+      groups.mask.position.copy(baseOffsets.mask);
+
+      // --- 4. UNIT.GLB (Integrated Bodyguard 7000 Telemetry Gauge, Hoses & 1st Stage Reducer) ---
+      const unitExtras = new THREE.Group();
+
+      // 1st Stage Pressure Reducer at Base
+      const reducerBlock = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.16), cadMaterials.steel);
+      reducerBlock.position.set(0, -0.58, -0.18);
+      unitExtras.add(reducerBlock);
+
+      // Bodyguard 7000 Electronic Monitoring Unit & ADSU (Right Chest)
+      const bodyguardUnit = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.21, 0.05), cadMaterials.carbon);
+      bodyguardUnit.position.set(-0.27, 0.05, 0.52);
+      bodyguardUnit.rotation.x = -0.25;
+      unitExtras.add(bodyguardUnit);
+
+      const bodyguardScreen = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.11, 0.01), cadMaterials.cyanGlow);
+      bodyguardScreen.position.set(-0.27, 0.07, 0.545);
+      bodyguardScreen.rotation.x = -0.25;
+      unitExtras.add(bodyguardScreen);
+
+      groups.unit.add(unitExtras);
+      groups.unit.position.copy(baseOffsets.unit);
+    }
+
+    buildProceduralCAD();
+
+    // -------------------------------------------------------------------------
+    // 3. AUTOMATIC & DRAG-AND-DROP GLTF / MP4 LOADER FOR USER'S 5 FILES
+    // -------------------------------------------------------------------------
+    const gltfLoader = new GLTFLoader();
+    const loadedCustomGLB = {
+      unit: false,
+      body: false,
+      tank: false,
+      mask: false
+    };
+
+    function normalizeAndMountGLTF(key, gltfScene) {
+      // Clear procedural fallback in that group
+      while (groups[key].children.length > 0) {
+        groups[key].remove(groups[key].children[0]);
+      }
+
+      // Compute bounding box and normalize scale so custom GLBs fit the viewport cleanly
+      const box = new THREE.Box3().setFromObject(gltfScene);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const targetScale = key === 'mask' ? 0.75 : key === 'tank' ? 1.35 : 1.75;
+      const scaleFactor = targetScale / maxDim;
+
+      gltfScene.position.sub(center);
+      const wrapper = new THREE.Group();
+      wrapper.add(gltfScene);
+      wrapper.scale.setScalar(scaleFactor);
+
+      groups[key].add(wrapper);
+      loadedCustomGLB[key] = true;
+
+      // Update UI Badges
+      const badge = document.getElementById(`badge-${key}`);
+      if (badge) {
+        const stateSpan = badge.querySelector('.asset-state');
+        if (stateSpan) {
+          stateSpan.textContent = '[GLB OK]';
+          stateSpan.className = 'asset-state text-draegerEmerald';
+        }
+      }
+      const modalStatus = document.getElementById(`modal-status-${key}`);
+      if (modalStatus) {
+        modalStatus.textContent = 'LOCAL GLB MOUNTED ✓';
+        modalStatus.className = 'text-draegerEmerald font-bold';
+      }
+    }
+
+    // Attempt automatic relative load of ./unit.glb, ./body.glb, ./tank.glb, ./mask.glb
+    ['unit', 'body', 'tank', 'mask'].forEach((assetKey) => {
+      gltfLoader.load(
+        `./${assetKey}.glb`,
+        (gltf) => {
+          normalizeAndMountGLTF(assetKey, gltf.scene);
+        },
+        undefined,
+        () => {
+          // Keeps procedural CAD mesh active seamlessly if relative file isn't mounted yet
+        }
+      );
     });
-    
-    introVideo.addEventListener("error", () => {
-        introContainer.style.display = "none";
+
+    // Check if ./intro.mp4 loaded
+    const introVideo = document.getElementById('intro-video');
+    introVideo.addEventListener('loadeddata', () => {
+      const badgeIntro = document.getElementById('badge-intro');
+      if (badgeIntro) {
+        const span = badgeIntro.querySelector('.asset-state');
+        if (span) {
+          span.textContent = '[MP4 OK]';
+          span.className = 'asset-state text-draegerEmerald';
+        }
+      }
+      const modalIntro = document.getElementById('modal-status-intro');
+      if (modalIntro) {
+        modalIntro.textContent = 'LOCAL MP4 STREAMING ✓';
+        modalIntro.className = 'text-draegerEmerald font-bold';
+      }
     });
-}
 
-/* ============================================================
-   START
-   ============================================================ */
+    // Local Drag-and-Drop / File Input Handler
+    function handleLocalFiles(fileList) {
+      Array.from(fileList).forEach((file) => {
+        const name = file.name.toLowerCase();
+        const objectUrl = URL.createObjectURL(file);
 
-console.log("========================================");
-console.log("DRÄGER PSS 7000 3D VIEWER");
-console.log("========================================");
-console.log("Models:");
-console.log("  ./body.glb");
-console.log("  ./mask.glb");
-console.log("  ./tank.glb");
-console.log("  ./unit.glb");
-console.log("Draco compression: ENABLED");
-console.log("========================================");
+        if (name.includes('intro') || name.endsWith('.mp4') || name.endsWith('.webm')) {
+          introVideo.src = objectUrl;
+          introVideo.play().catch(() => {});
+          return;
+        }
 
-animate();
+        ['unit', 'body', 'tank', 'mask'].forEach((key) => {
+          if (name.includes(key)) {
+            gltfLoader.load(objectUrl, (gltf) => {
+              normalizeAndMountGLTF(key, gltf.scene);
+            });
+          }
+        });
+      });
+    }
 
-</script>
+    const fileInput = document.getElementById('file-input');
+    const dropzone = document.getElementById('dropzone');
+    fileInput.addEventListener('change', (e) => handleLocalFiles(e.target.files));
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('bg-draegerCyan/20');
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('bg-draegerCyan/20'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('bg-draegerCyan/20');
+      if (e.dataTransfer.files.length) handleLocalFiles(e.dataTransfer.files);
+    });
 
+    // Modal Open/Close
+    const assetModal = document.getElementById('asset-modal');
+    document.getElementById('btn-open-loader').addEventListener('click', () => {
+      assetModal.classList.remove('hidden');
+      assetModal.classList.add('flex');
+    });
+    document.getElementById('btn-close-loader').addEventListener('click', () => {
+      assetModal.classList.add('hidden');
+      assetModal.classList.remove('flex');
+    });
+
+    // -------------------------------------------------------------------------
+    // 4. 3D INTERACTIVE CALLOUT HOTSPOTS (PROJECTED TO 2D SCREEN COORDINATES)
+    // -------------------------------------------------------------------------
+    const hotspotsData = [
+      {
+        id: 'hs-hud',
+        stage: [0, 1, 4],
+        group: 'mask',
+        localPos: new THREE.Vector3(0.16, 0.14, 0.2),
+        code: 'FPS® 7000 HUD',
+        detail: 'Wireless 4-LED Head-Up Display (Auto-Brightness)'
+      },
+      {
+        id: 'hs-ldv',
+        stage: [1, 4],
+        group: 'mask',
+        localPos: new THREE.Vector3(-0.14, -0.12, 0.28),
+        code: 'PLUS LDV',
+        detail: '>1,000 L/min Max Airflow // Positive Pressure Lock'
+      },
+      {
+        id: 'hs-tank',
+        stage: [0, 1, 3],
+        group: 'tank',
+        localPos: new THREE.Vector3(0.24, 0.25, 0),
+        code: '6.8L 300 BAR',
+        detail: '2,040L Breathable Air // Carbon Composite Vessel'
+      },
+      {
+        id: 'hs-quickconnect',
+        stage: [1, 3],
+        group: 'tank',
+        localPos: new THREE.Vector3(0.12, -0.74, 0),
+        code: 'QUICKCONNECT',
+        detail: 'Quarter-Turn Coupling // >5 Bar Safety Interlock'
+      },
+      {
+        id: 'hs-backplate',
+        stage: [1, 2],
+        group: 'body',
+        localPos: new THREE.Vector3(-0.28, 0.32, 0.05),
+        code: '3-PT BACKPLATE',
+        detail: 'Carbon Composite // Tool-Free Slide-and-Lock Harness'
+      },
+      {
+        id: 'hs-waist',
+        stage: [2],
+        group: 'body',
+        localPos: new THREE.Vector3(0.32, -0.55, 0.2),
+        code: 'PIVOT WAIST BELT',
+        detail: 'Dynamic Sliding & Pivoting Hip Load Transfer'
+      },
+      {
+        id: 'hs-bodyguard',
+        stage: [0, 1, 5],
+        group: 'unit',
+        localPos: new THREE.Vector3(-0.28, 0.06, 0.54),
+        code: 'BODYGUARD® 7000',
+        detail: 'Electronic Telemetry + 102–112 dBA ADSU Distress Alarm'
+      }
+    ];
+
+    const hotspotsLayer = document.getElementById('hotspots-layer');
+    const hotspotElements = {};
+
+    hotspotsData.forEach((h) => {
+      const el = document.createElement('div');
+      el.className = 'hotspot-marker font-mono';
+      el.innerHTML = `
+        <div class="group relative flex items-center gap-2 cursor-pointer">
+          <span class="w-3 h-3 rounded-full bg-draegerCyan/30 border border-draegerCyan flex items-center justify-center">
+            <span class="w-1 h-1 rounded-full bg-draegerCyan"></span>
+          </span>
+          <div class="px-2 py-1 rounded bg-[#050608]/90 border border-white/20 group-hover:border-draegerCyan transition shadow-lg">
+            <div class="text-[10px] font-bold text-draegerCyan leading-none">${h.code}</div>
+            <div class="hidden group-hover:block text-[10px] text-gray-300 mt-1 whitespace-nowrap">${h.detail}</div>
+          </div>
+        </div>
+      `;
+      hotspotsLayer.appendChild(el);
+      hotspotElements[h.id] = el;
+    });
+
+    // -------------------------------------------------------------------------
+    // 5. SCROLLYTELLING CAMERA STATES & SUBSYSTEM ISOLATION
+    // -------------------------------------------------------------------------
+    let activeStage = 0;
+    let explodeFactor = 0;
+    let wireframeActive = false;
+
+    const stageKeyframes = [
+      // Stage 00: Hero Overview
+      {
+        camPos: new THREE.Vector3(0.65, 0.45, 3.35),
+        lookAt: new THREE.Vector3(-0.35, 0.05, 0),
+        rotY: -0.35,
+        vis: { unit: 1, body: 1, tank: 1, mask: 1 },
+        videoOpacity: 0.35
+      },
+      // Stage 01: Complete Unit Architecture (unit.glb)
+      {
+        camPos: new THREE.Vector3(0.85, 0.25, 2.85),
+        lookAt: new THREE.Vector3(-0.35, 0.0, 0),
+        rotY: 0.45,
+        vis: { unit: 1, body: 1, tank: 1, mask: 1 },
+        videoOpacity: 0.08
+      },
+      // Stage 02: Carrying System & Backplate (body.glb focus)
+      {
+        camPos: new THREE.Vector3(-0.75, 0.05, 2.45),
+        lookAt: new THREE.Vector3(-0.25, -0.05, 0),
+        rotY: 0.85,
+        vis: { unit: 0.25, body: 1, tank: 0.18, mask: 0.15 },
+        videoOpacity: 0.04
+      },
+      // Stage 03: Compressed Air Cylinder & QuickConnect (tank.glb focus)
+      {
+        camPos: new THREE.Vector3(0.55, -0.05, 2.35),
+        lookAt: new THREE.Vector3(-0.25, -0.05, -0.15),
+        rotY: 2.65,
+        vis: { unit: 0.2, body: 0.2, tank: 1, mask: 0.12 },
+        videoOpacity: 0.04
+      },
+      // Stage 04: FPS 7000 Full-Face Mask & HUD (mask.glb focus)
+      {
+        camPos: new THREE.Vector3(0.25, 0.58, 1.65),
+        lookAt: new THREE.Vector3(-0.18, 0.48, 0.25),
+        rotY: -0.15,
+        vis: { unit: 0.15, body: 0.15, tank: 0.15, mask: 1 },
+        videoOpacity: 0.04
+      },
+      // Stage 05: Pre-Wear Operational Check (Exploded / Full Telemetry)
+      {
+        camPos: new THREE.Vector3(0.95, 0.35, 3.1),
+        lookAt: new THREE.Vector3(-0.35, 0.05, 0),
+        rotY: -0.55,
+        vis: { unit: 1, body: 1, tank: 1, mask: 1 },
+        videoOpacity: 0.12
+      }
+    ];
+
+    const targetCamPos = stageKeyframes[0].camPos.clone();
+    const targetLookAt = stageKeyframes[0].lookAt.clone();
+    let targetRotY = stageKeyframes[0].rotY;
+
+    function applySubsystemVisibility(visMap) {
+      Object.keys(groups).forEach((key) => {
+        const alpha = visMap[key];
+        groups[key].traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.transparent = alpha < 0.99 || child.material === cadMaterials.visorGlass;
+            if (child.material !== cadMaterials.visorGlass) {
+              child.material.opacity = alpha;
+            }
+            child.material.wireframe = wireframeActive;
+          }
+        });
+      });
+    }
+
+    function setStage(index) {
+      activeStage = Math.max(0, Math.min(stageKeyframes.length - 1, index));
+      const kf = stageKeyframes[activeStage];
+
+      targetCamPos.copy(kf.camPos);
+      targetLookAt.copy(kf.lookAt);
+      targetRotY = kf.rotY;
+
+      introVideo.style.opacity = kf.videoOpacity;
+      applySubsystemVisibility(kf.vis);
+
+      // Update Left Navigation Rail
+      document.querySelectorAll('.rail-btn').forEach((btn) => {
+        const r = Number(btn.getAttribute('data-rail'));
+        if (r === activeStage) {
+          btn.className = 'rail-btn text-left flex items-center gap-2 text-draegerCyan font-semibold transition';
+        } else {
+          btn.className = 'rail-btn text-left flex items-center gap-2 text-gray-400 hover:text-white transition';
+        }
+      });
+    }
+
+    // Smooth scroll helper exposed globally
+    window.scrollToStage = (idx) => {
+      const el = document.getElementById(`stage-${idx}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    window.focusAssetSubsystem = (assetName) => {
+      const map = { unit: 1, body: 2, tank: 3, mask: 4 };
+      if (map[assetName] !== undefined) window.scrollToStage(map[assetName]);
+    };
+
+    // Track scroll position to update active stage & percentage
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const pct = Math.min(100, Math.round((scrollTop / maxScroll) * 100));
+      document.getElementById('scroll-pct-readout').textContent = `${String(pct).padStart(2, '0')}%`;
+
+      const sections = document.querySelectorAll('section[data-stage]');
+      let bestStage = 0;
+      let minDelta = Infinity;
+      sections.forEach((sec) => {
+        const rect = sec.getBoundingClientRect();
+        const delta = Math.abs(rect.top - window.innerHeight * 0.25);
+        if (delta < minDelta) {
+          minDelta = delta;
+          bestStage = Number(sec.getAttribute('data-stage'));
+        }
+      });
+      if (bestStage !== activeStage) {
+        setStage(bestStage);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // 6. HEADER CONTROLS: X-RAY WIREFRAME, EXPLODE SLIDER & ORBIT TOGGLE
+    // -------------------------------------------------------------------------
+    const sliderExplode = document.getElementById('slider-explode');
+    const explodeValLabel = document.getElementById('explode-val');
+    const btnExplode = document.getElementById('btn-explode');
+    const btnWireframe = document.getElementById('btn-wireframe');
+    const btnFreeCam = document.getElementById('btn-free-cam');
+    let orbitLockToScroll = true;
+
+    function updateExplodePositions(factor01) {
+      explodeFactor = factor01;
+      explodeValLabel.textContent = `${Math.round(factor01 * 100)}%`;
+      sliderExplode.value = Math.round(factor01 * 100);
+
+      Object.keys(groups).forEach((k) => {
+        if (!loadedCustomGLB[k]) {
+          groups[k].position.copy(baseOffsets[k]).addScaledVector(explodeVectors[k], factor01);
+        } else {
+          groups[k].position.set(0, 0, 0).addScaledVector(explodeVectors[k], factor01);
+        }
+      });
+    }
+
+    sliderExplode.addEventListener('input', (e) => {
+      updateExplodePositions(Number(e.target.value) / 100);
+    });
+
+    btnExplode.addEventListener('click', () => {
+      const next = explodeFactor > 0.2 ? 0 : 0.85;
+      updateExplodePositions(next);
+      btnExplode.textContent = next > 0 ? '[COLLAPSE]' : '[EXPLODE]';
+    });
+
+    btnWireframe.addEventListener('click', () => {
+      wireframeActive = !wireframeActive;
+      btnWireframe.classList.toggle('border-draegerCyan', wireframeActive);
+      btnWireframe.classList.toggle('text-draegerCyan', wireframeActive);
+      applySubsystemVisibility(stageKeyframes[activeStage].vis);
+    });
+
+    btnFreeCam.addEventListener('click', () => {
+      orbitLockToScroll = !orbitLockToScroll;
+      controls.enableZoom = !orbitLockToScroll;
+      btnFreeCam.textContent = orbitLockToScroll ? '[3D ORBIT: ON]' : '[FREE ZOOM: ON]';
+    });
+
+    // -------------------------------------------------------------------------
+    // 7. DRÄGER BODYGUARD® 7000 & FPS® 7000 WIRELESS HUD SIMULATION ENGINE
+    // -------------------------------------------------------------------------
+    let cylinderPressureBar = 300;
+    let breathingRateLpm = 40; // Nominal working consumption (EN 137 standard = 40 L/min)
+    let autoBreatheActive = false;
+    let passAlarmActive = false;
+    let audioCtx = null;
+
+    const sliderPressure = document.getElementById('slider-pressure');
+    const telemetryBar = document.getElementById('telemetry-bar');
+    const telemetryTtw = document.getElementById('telemetry-ttw');
+    const telemetryLiters = document.getElementById('telemetry-liters');
+    const bgStatusPill = document.getElementById('bg-status-pill');
+    const whistleIndicator = document.getElementById('whistle-indicator');
+    const hudPatternText = document.getElementById('hud-pattern-text');
+    const led1 = document.getElementById('hud-led-1');
+    const led2 = document.getElementById('hud-led-2');
+    const led3 = document.getElementById('hud-led-3');
+    const led4 = document.getElementById('hud-led-4');
+
+    // Web Audio API Synthesizer for Dräger Bodyguard 7000 PASS Alarm & 55 Bar Whistle
+    function playTelemetryTone(freq = 2600, durationMs = 160, type = 'square') {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durationMs / 1000);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + durationMs / 1000);
+      } catch (_) {}
+    }
+
+    function updateBodyguardTelemetry() {
+      const bar = Math.round(cylinderPressureBar);
+      const freeLitres = Math.round(bar * 6.8);
+      // Time to Whistle (55 bar reserve threshold)
+      const usableBar = Math.max(0, bar - 55);
+      const usableLitres = usableBar * 6.8;
+      const ttwMinutes = Math.round(usableLitres / breathingRateLpm);
+
+      telemetryBar.textContent = bar;
+      telemetryLiters.textContent = freeLitres;
+      telemetryTtw.textContent = ttwMinutes;
+
+      // Whistle Warning Logic (55 ± 5 bar)
+      if (bar <= 60 && bar > 0) {
+        whistleIndicator.textContent = '⚠ WHISTLE ACTIVE (>90 dBA @ 55 BAR)';
+        whistleIndicator.className = 'text-draegerCrimson font-bold animate-pulse';
+      } else {
+        whistleIndicator.textContent = 'WHISTLE: STANDBY (<55 BAR)';
+        whistleIndicator.className = 'text-gray-500';
+      }
+
+      // FPS 7000 Wireless HUD 4-LED Array Logic
+      const resetLed = (el) => {
+        el.className = 'h-2.5 rounded-sm bg-white/10 border border-white/10 transition-all';
+      };
+      resetLed(led1);
+      resetLed(led2);
+      resetLed(led3);
+      resetLed(led4);
+
+      if (bar > 225) {
+        // 4 Green LEDs (100% - 75%)
+        [led1, led2, led3, led4].forEach((l) => {
+          l.className = 'h-2.5 rounded-sm bg-draegerEmerald border border-white/30 shadow-[0_0_8px_#00e676]';
+        });
+        hudPatternText.textContent = '4× GREEN (100–75%)';
+        hudPatternText.className = 'text-draegerEmerald';
+        cadMaterials.emeraldGlow.color.setHex(0x00e676);
+        cadMaterials.emeraldGlow.emissive.setHex(0x00e676);
+      } else if (bar > 150) {
+        // 3 Green LEDs (75% - 50%)
+        [led1, led2, led3].forEach((l) => {
+          l.className = 'h-2.5 rounded-sm bg-draegerEmerald border border-white/30 shadow-[0_0_8px_#00e676]';
+        });
+        hudPatternText.textContent = '3× GREEN (75–50%)';
+        hudPatternText.className = 'text-draegerEmerald';
+        cadMaterials.emeraldGlow.color.setHex(0x00e676);
+        cadMaterials.emeraldGlow.emissive.setHex(0x00e676);
+      } else if (bar > 60) {
+        // 2 Amber LEDs (50% - 20%)
+        [led1, led2].forEach((l) => {
+          l.className = 'h-2.5 rounded-sm bg-draegerAmber border border-white/30 shadow-[0_0_8px_#ff9e00]';
+        });
+        hudPatternText.textContent = '2× AMBER (50–20%)';
+        hudPatternText.className = 'text-draegerAmber';
+        cadMaterials.emeraldGlow.color.setHex(0xff9e00);
+        cadMaterials.emeraldGlow.emissive.setHex(0xff9e00);
+      } else {
+        // Flashing Red LED (<60 bar retreat warning)
+        led1.className = 'h-2.5 rounded-sm bg-draegerCrimson border border-white/30 led-blink';
+        hudPatternText.textContent = '1× RED FLASH (<60 BAR RETREAT)';
+        hudPatternText.className = 'text-draegerCrimson font-bold';
+        cadMaterials.emeraldGlow.color.setHex(0xff2a4b);
+        cadMaterials.emeraldGlow.emissive.setHex(0xff2a4b);
+      }
+
+      // Status Pill
+      if (passAlarmActive) {
+        bgStatusPill.textContent = 'PASS DISTRESS (112 dBA)';
+        bgStatusPill.className = 'px-2 py-0.5 text-[10px] rounded bg-draegerCrimson text-black font-bold animate-pulse';
+      } else if (bar <= 60) {
+        bgStatusPill.textContent = 'LOW AIR WHISTLE';
+        bgStatusPill.className = 'px-2 py-0.5 text-[10px] rounded bg-draegerCrimson/20 border border-draegerCrimson text-draegerCrimson font-semibold';
+      } else if (bar <= 150) {
+        bgStatusPill.textContent = 'WORKING RESERVE';
+        bgStatusPill.className = 'px-2 py-0.5 text-[10px] rounded bg-draegerAmber/20 border border-draegerAmber text-draegerAmber font-semibold';
+      } else {
+        bgStatusPill.textContent = 'NOMINAL';
+        bgStatusPill.className = 'px-2 py-0.5 text-[10px] rounded bg-draegerEmerald/15 border border-draegerEmerald/50 text-draegerEmerald font-semibold';
+      }
+    }
+
+    sliderPressure.addEventListener('input', (e) => {
+      cylinderPressureBar = Number(e.target.value);
+      updateBodyguardTelemetry();
+    });
+
+    // Breathing Rate Buttons
+    document.querySelectorAll('.rate-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        breathingRateLpm = Number(btn.getAttribute('data-rate'));
+        document.querySelectorAll('.rate-btn').forEach((b) => {
+          b.className = 'rate-btn px-2 py-1 rounded border border-white/15 bg-white/5 text-gray-300 hover:border-draegerCyan';
+        });
+        btn.className = 'rate-btn px-2 py-1 rounded border border-draegerCyan bg-draegerCyan/15 text-draegerCyan font-semibold';
+        updateBodyguardTelemetry();
+      });
+    });
+
+    // Auto-Drain Simulation
+    const btnAutoBreathe = document.getElementById('btn-auto-breathe');
+    btnAutoBreathe.addEventListener('click', () => {
+      autoBreatheActive = !autoBreatheActive;
+      btnAutoBreathe.textContent = autoBreatheActive ? '[AUTO DRAIN: ON]' : '[AUTO DRAIN: OFF]';
+      btnAutoBreathe.classList.toggle('border-draegerEmerald', autoBreatheActive);
+      btnAutoBreathe.classList.toggle('text-draegerEmerald', autoBreatheActive);
+    });
+
+    // PASS Alarm Button (Simulates Bodyguard 7000 ADSU Emergency Distress Alarm)
+    const btnPassAlarm = document.getElementById('btn-pass-alarm');
+    btnPassAlarm.addEventListener('click', () => {
+      passAlarmActive = !passAlarmActive;
+      document.body.classList.toggle('pass-alarm-active', passAlarmActive);
+      btnPassAlarm.textContent = passAlarmActive ? '[SILENCE PASS]' : '[PASS ALARM]';
+      if (passAlarmActive) playTelemetryTone(2850, 220, 'sawtooth');
+      updateBodyguardTelemetry();
+    });
+
+    setInterval(() => {
+      if (autoBreatheActive && cylinderPressureBar > 0) {
+        cylinderPressureBar = Math.max(0, cylinderPressureBar - breathingRateLpm / 25);
+        sliderPressure.value = Math.round(cylinderPressureBar);
+        updateBodyguardTelemetry();
+      }
+      if (passAlarmActive) {
+        playTelemetryTone(2900, 140, 'sawtooth');
+        setTimeout(() => playTelemetryTone(2200, 140, 'sawtooth'), 170);
+      } else if (cylinderPressureBar > 0 && cylinderPressureBar <= 58 && autoBreatheActive) {
+        playTelemetryTone(3200, 90, 'sine');
+      }
+    }, 650);
+
+    // -------------------------------------------------------------------------
+    // 8. STAGE 05 PRE-WEAR CHECKLIST & LOG EXPORT
+    // -------------------------------------------------------------------------
+    const checkInputs = document.querySelectorAll('.ba-check');
+    const scoreBadge = document.getElementById('checklist-score');
+
+    checkInputs.forEach((chk) => {
+      chk.addEventListener('change', () => {
+        const completed = Array.from(checkInputs).filter((c) => c.checked).length;
+        scoreBadge.textContent = `${completed} / 6 VERIFIED`;
+      });
+    });
+
+    document.getElementById('btn-export-cert').addEventListener('click', () => {
+      const completed = Array.from(checkInputs).filter((c) => c.checked).length;
+      const logText = [
+        'DRÄGER PSS® 7000 SCBA — OPERATIONAL TRAINING & PRE-WEAR VERIFICATION LOG',
+        `Timestamp: ${new Date().toISOString()}`,
+        `Standard: EN 137:2006 Type 2 / vfdb 0802 / ATEX I M1 II 1GD`,
+        `Pre-Entry Checks Verified: ${completed} / 6`,
+        `Simulated Cylinder Pressure: ${Math.round(cylinderPressureBar)} BAR`,
+        `Subsystems Inspected: unit.glb, body.glb, tank.glb, mask.glb`
+      ].join('\n');
+
+      const textarea = document.createElement('textarea');
+      textarea.value = logText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      const toast = document.getElementById('cert-toast');
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3500);
+    });
+
+    // -------------------------------------------------------------------------
+    // 9. RENDER LOOP & 3D-TO-2D HOTSPOT PROJECTION
+    // -------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+    const tempVec = new THREE.Vector3();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Smoothly interpolate camera & root rotation toward current stage keyframe
+      if (orbitLockToScroll) {
+        camera.position.lerp(targetCamPos, 0.05);
+        controls.target.lerp(targetLookAt, 0.05);
+      }
+      scbaRoot.rotation.y = THREE.MathUtils.lerp(
+        scbaRoot.rotation.y,
+        targetRotY + Math.sin(elapsed * 0.55) * 0.06,
+        0.05
+      );
+      scbaRoot.position.y = Math.sin(elapsed * 1.1) * 0.025;
+
+      controls.update();
+      renderer.render(scene, camera);
+
+      // Update 2D screen positions of 3D Callout Hotspots
+      hotspotsData.forEach((h) => {
+        const el = hotspotElements[h.id];
+        const visibleInStage = h.stage.includes(activeStage);
+        if (!visibleInStage) {
+          el.style.opacity = '0';
+          el.style.pointerEvents = 'none';
+          return;
+        }
+
+        tempVec.copy(h.localPos);
+        groups[h.group].localToWorld(tempVec);
+        tempVec.project(camera);
+
+        const x = (tempVec.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(tempVec.y * 0.5) + 0.5) * window.innerHeight;
+
+        if (tempVec.z < 1 && x > 60 && x < window.innerWidth - 60 && y > 60 && y < window.innerHeight - 60) {
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+          el.style.opacity = '1';
+          el.style.pointerEvents = 'auto';
+        } else {
+          el.style.opacity = '0';
+          el.style.pointerEvents = 'none';
+        }
+      });
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.onload = () => {
+      setStage(0);
+      updateBodyguardTelemetry();
+      animate();
+    };
+  </script>
 </body>
 </html>
